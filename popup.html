@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Voice Translator</title>
+  <style>
+    body { font-family: sans-serif; padding: 15px; width: 250px; }
+    button, select { width: 100%; padding: 8px; margin-top: 8px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h3>🌍 AI Voice Translator</h3>
+
+  <select id="userLanguage"></select>
+  <button id="saveBtn">💾 Save Language</button>
+
+  <button id="readBtn">🔊 Read</button>
+  <button id="pauseBtn">⏸️ Pause</button>
+  <button id="stopBtn">⏹️ Stop</button>
+
+  <button id="translateBtn">🌐 Translate Page</button>
+  <button id="micBtn">🎙️ Start Voice</button>
+  <button id="commandsBtn">🗒️ Show Commands</button>
+
+  <label style="display:flex;align-items:center;margin-top:8px;">
+    <input type="checkbox" id="voiceMode" style="margin-right:6px;">
+    🎧 Voice Mode (Auto-start)
+  </label>
+
+  <p id="status"></p>
+  <script src="popup.js"></script>
+</body>
+</html>

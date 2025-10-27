@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Extension Settings</title>
+  <style>
+    body { font-family: sans-serif; padding: 1.5rem; max-width:720px; }
+    label { display:block; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <h2>Voice Screen Reader - Settings</h2>
+
+  <label>
+    <input id="voiceMode" type="checkbox" />
+    Enable Voice Mode (ask/answer with voice)
+  </label>
+
+  <label>
+    Recognize language (system-detected by default):
+    <select id="recognitionLang"></select>
+  </label>
+
+  <label>
+    Target UI / Answer language (what the user wants answers spoken in):
+    <select id="targetLang"></select>
+  </label>
+
+  <button id="saveBtn">Save</button>
+  <div id="status"></div>
+
+<script>
+  const langs = [
+    ['auto','Auto (detect)'],
+    ['en','English'],
+    ['hi','Hindi'],
+    ['fr','French'],
+    ['es','Spanish'],
+    ['zh','Chinese']
+  ];
+
+  function buildOptions(select) {
+    langs.forEach(([value,label])=>{
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      select.appendChild(o);
+    });
+  }
+
+  const recognitionLang = document.getElementById('recognitionLang');
+  const targetLang = document.getElementById('targetLang');
+  buildOptions(recognitionLang);
+  buildOptions(targetLang);
+
+  // Detect system language default
+  const sysLang = navigator.language?.split('-')[0] || 'en';
+  recognitionLang.value = sysLang;
+  targetLang.value = sysLang;
+
+  // Load saved
+  chrome.storage.sync.get(['voiceMode','recognitionLang','targetLang'], (res)=>{
+    if (res.voiceMode !== undefined) document.getElementById('voiceMode').checked = res.voiceMode;
+    if (res.recognitionLang) recognitionLang.value = res.recognitionLang;
+    if (res.targetLang) targetLang.value = res.targetLang;
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const settings = {
+      voiceMode: document.getElementById('voiceMode').checked,
+      recognitionLang: recognitionLang.value,
+      targetLang: targetLang.value
+    };
+    chrome.storage.sync.set(settings, () => {
+      document.getElementById('status').textContent = 'Saved ✓';
+      setTimeout(()=>document.getElementById('status').textContent='',1500);
+    });
+  });
+</script>
+</body>
+</html>

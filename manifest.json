@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "AI Translator Chrome Extension",
+  "version": "1.1",
+  "description": "Translate webpage content using Chrome's on-device Translator API",
+  "permissions": ["activeTab", "storage", "tabs", "commands", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AI Translator"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "icons": {
+    "128": "icon.png"
+  },
+  "commands": {
+    "toggle_voice_mode": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+V"
+      },
+      "description": "Toggle voice mode on/off"
+    }
+  }
+}
