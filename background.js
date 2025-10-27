@@ -28,33 +28,46 @@ async function detectLanguage(text) {
 
   const detector = await LanguageDetector.create();
   const results = await detector.detect(text);
-  console.log('📊 Detection results:', results);
-  return results[0]?.detectedLanguage || 'en';
+
+  const detected = results?.[0]?.detectedLanguage || 'en';
+  console.log(`🌎 Detected language: ${detected}`);
+  return detected;
 }
 
+
 async function translateText(text, userLanguage) {
-  console.log('🔁 Translating text...');
+  console.log('Translating text...');
   if (!('Translator' in self) || !('LanguageDetector' in self)) {
     throw new Error('Translation APIs not supported in this browser.');
   }
 
+  // Step 1— Detect source language first
   const sourceLanguage = await detectLanguage(text);
-  console.log(`🌍 Detected: ${sourceLanguage} → ${userLanguage}`);
 
+  // Step 2 — If same as userLanguage, skip translation
+  if (sourceLanguage === userLanguage) {
+    console.log('⚡ Same language detected — skipping translation');
+    return text;
+  }
+
+  console.log(`🌍 Translating: ${sourceLanguage} → ${userLanguage}`);
+
+  // Step 3 — Check model availability
   const availability = await Translator.availability({ sourceLanguage, targetLanguage: userLanguage });
   console.log('📦 Translator availability:', availability);
 
-  if (availability !== 'available' && availability !== 'downloadable') {
+  if (!['available', 'downloadable'].includes(availability)) {
     throw new Error(`Model unavailable for ${sourceLanguage} → ${userLanguage}.`);
   }
 
+  // Step 4— Reuse or create translator
   try {
     if (
       translatorCache &&
       translatorCache.sourceLanguage === sourceLanguage &&
       translatorCache.targetLanguage === userLanguage
     ) {
-      console.log('♻️ Reusing cached translator');
+      console.log('Reusing cached translator');
     } else {
       console.log('⬇️ Creating new translator...');
       translatorCache = await Translator.create({
@@ -62,20 +75,24 @@ async function translateText(text, userLanguage) {
         targetLanguage: userLanguage,
         monitor(m) {
           m.addEventListener('downloadprogress', (e) => {
-            console.log(`📶 Model download progress: ${(e.loaded * 100).toFixed(1)}%`);
+            console.log(` Model download: ${(e.loaded * 100).toFixed(1)}%`);
           });
-        }
+        },
       });
+      translatorCache.sourceLanguage = sourceLanguage;
+      translatorCache.targetLanguage = userLanguage;
     }
   } catch (err) {
-    console.error('❌ Translator model creation failed:', err);
+    console.error('Translator creation failed:', err);
     throw new Error('Model not available or download failed. Please retry.');
   }
 
+  // Step 5— Translate text
   const translated = await translatorCache.translate(text);
-  console.log('✅ Translation done.');
+  console.log(' Translation complete.');
   return translated;
 }
+
 
 // ===============================
 // MESSAGE HANDLER 
@@ -89,19 +106,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const { userLanguage } = await chrome.storage.sync.get("userLanguage");
       console.log("🔧 User target language:", userLanguage);
 
-      if (request.isVoiceCommand) {
-        console.log("🎧 Voice command translation request received:", request.text);
-        try {
-          const translated = await translateCommandText(request.text);
-          sendResponse({ success: true, result: translated });
-        } catch (err) {
-          console.error("❌ Voice command translation failed:", err);
-          sendResponse({ success: false, error: err.message });
-        }
-        return;
-      }
-
-      // Normal translation
       try {
         const result = await translateText(request.text, request.targetLang || userLanguage);
         console.log("✅ Sending translated result back");
@@ -158,8 +162,9 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ===============================
 // PROMPT API
 // ===============================
-chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
   if (req.action === "translate_with_gemini") {
+  (async () => {
   const { text, userLanguage } = req;
   console.log("🎧 Received translate_with_gemini:", { text, userLanguage });
 
@@ -218,7 +223,7 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
                   like the *main* or *first* intent.
                 - Output must always follow this schema:
                     { "command": "<command>", "question": "<optional>" }
-                - Only include "question" if the command is "ask".
+                - *Only include "question" if the command is "ask" *.
                 - No explanations, text, or formatting outside valid JSON.
               `,
             },
@@ -282,12 +287,15 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
     console.error("Gemini translation failed:", error);
     sendResponse({ success: false, error: error?.message || "Unknown error" });
   }
+})();
 
-  return true; // keep the channel open for async response
+  // ✅ Tell Chrome to keep message channel open for async response
+  return true;
 }
 
 
   if (req.action === "ask_with_gemini") {
+     (async () => {
     const { question } = req;
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -354,8 +362,11 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
       sendResponse({ success: false, error: error.message });
     }
 
-    return true;
-  }
+    })();
+
+  // ✅ Tell Chrome to keep message channel open for async response
+  return true;
+}
 
 });
 
