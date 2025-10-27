@@ -303,86 +303,205 @@ async function handleCheckGemini(tabId) {
       error: error.message 
     };
   }
-
-
 }
-
 
 chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
   if (req.action === "translate_with_gemini") {
-    const { text, userLanguage } = req;
+  const { text, userLanguage } = req;
+  console.log("🎧 Received translate_with_gemini:", { text, userLanguage });
 
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      console.error("❌ No active tab found");
+      sendResponse({ success: false, reason: "No active tab found" });
+      return;
+    }
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: "MAIN",
+      func: async (text, userLanguage) => {
+        const LM = window.ai?.languageModel || window.LanguageModel;
+        if (!LM) {
+          return { success: false, reason: "Language Model API not available in this context" };
+        }
+
+        async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
+          const start = Date.now();
+          while (Date.now() - start < timeoutMs) {
+            const availability = LM.availability ? await LM.availability() : "readily";
+            if (["available", "readily", "after-download"].includes(availability)) return true;
+            await new Promise((res) => setTimeout(res, intervalMs));
+          }
+          return false;
+        }
+
+        const ready = await waitUntilReady();
+        if (!ready) return { success: false, reason: "Model not ready" };
+
+        console.log("✅ Model ready. Creating session...");
+        const inputLanguages = ["en"];
+        if (userLanguage && userLanguage.toLowerCase() !== "en") {
+          if (userLanguage.toLowerCase() === "es"  || userLanguage.toLowerCase() === "ja"  ){
+          inputLanguages.push(userLanguage);
+          }
+        }
+        const session = await LM.create({
+          expectedInputs: [{ type: "text", languages:inputLanguages}],
+          expectedOutputs: [{ type: "text", languages: ["en"] }],
+          outputLanguage: "en",
+          initialPrompts: [
+            {
+              role: "system",
+              content: `
+                You are an AI assistant that interprets spoken or written user commands into
+                one of the following English commands: read, pause, stop, translate,
+                show commands, ask, summarise.
+
+                Rules:
+                - Always choose only ONE command that best represents the user's intent.
+                - If the user says something like "read and pause", select the one that sounds
+                  like the *main* or *first* intent.
+                - Output must always follow this schema:
+                    { "command": "<command>", "question": "<optional>" }
+                - Only include "question" if the command is "ask".
+                - No explanations, text, or formatting outside valid JSON.
+              `,
+            },
+          ],
+        });
+
+        console.log("🧠 Session created. Sending prompt...");
+
+        const promptText = `
+          User said (in ${userLanguage}): "${text}"
+          Determine which one command applies, and respond strictly following the JSON schema.
+        `;
+
+        // ✅ Structured output JSON Schema
+        const responseSchema = {
+          type: "object",
+          properties: {
+            command: {
+              type: "string",
+              enum: ["read", "pause", "stop", "translate", "show commands", "ask", "summarise"],
+            },
+            question: { type: "string" },
+          },
+          required: ["command"],
+          additionalProperties: false,
+        };
+
+        try {
+          const result = await session.prompt(promptText, {
+            responseConstraint: responseSchema,  // ✅ enforce structured output
+            omitResponseConstraintInput: true,   // ✅ avoid counting schema toward quota
+          });
+
+          console.log("✅ Gemini JSON Result:", result);
+
+          let parsed;
+          try {
+            parsed = JSON.parse(result);
+          } catch (e) {
+            console.warn("⚠️ Invalid JSON:", result);
+            parsed = { command: "unknown", raw: result };
+          }
+
+          return { success: true, result: parsed };
+        } catch (err) {
+          console.error("💥 Prompt failed:", err);
+          return { success: false, error: err?.message || "Prompt failed" };
+        }
+      },
+      args: [text, userLanguage],
+    });
+
+    if (!results?.length || !results[0]?.result) {
+      console.error("❌ No valid results from executeScript");
+      sendResponse({ success: false, reason: "No valid result returned" });
+      return;
+    }
+
+    sendResponse(results[0].result);
+  } catch (error) {
+    console.error("⚠️ Gemini translation failed:", error);
+    sendResponse({ success: false, error: error?.message || "Unknown error" });
+  }
+
+  return true; // keep the channel open for async response
+}
+
+
+  if (req.action === "ask_with_gemini") {
+    const { question } = req;
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      // 🧾 Get page content (limited to visible text)
+      const [{ result: pageText }] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => document.body.innerText.slice(0, 8000), // limit for token safety
+      });
 
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         world: "MAIN",
-        func: async (text, userLanguage) => {
+        func: async (question, pageText) => {
           const LM = window.ai?.languageModel || window.LanguageModel;
           if (!LM) {
-            return { success: false, reason: "Language Model API not available in this context" };
+            return { success: false, reason: "Language Model API not available" };
           }
 
-          // ✅ Wait for model readiness (accept both available & readily)
           async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
             const start = Date.now();
             while (Date.now() - start < timeoutMs) {
               const availability = LM.availability ? await LM.availability() : "readily";
-              if (["available", "readily"].includes(availability)) return true;
+              if (["available", "readily", "after-download"].includes(availability)) return true;
               await new Promise((res) => setTimeout(res, intervalMs));
             }
             return false;
           }
 
           const ready = await waitUntilReady();
-          if (!ready) {
-            return { success: false, reason: "Language model not ready after waiting" };
-          }
-
-          console.log("✅ Model ready. Creating session...");
+          if (!ready) return { success: false, reason: "Model not ready" };
 
           const session = await LM.create({
-            expectedInputs: [{ type: "text", languages: ["en", userLanguage] }],
+            expectedInputs: [{ type: "text", languages: ["en"] }],
             expectedOutputs: [{ type: "text", languages: ["en"] }],
-            outputLanguage: "en", // ✅ prevents output language warning
-            initialPrompts: [
-              {
-                role: "system",
-                content: `
-                  You are an AI assistant that translates and interprets spoken or written commands
-                  into short, clear English command words.
-                  Supported commands: read, pause, stop, translate, show commands, ask, summarise.
-                  If multiple commands exist (like "read and then pause"), separate them with commas.
-                  Always respond with only the English command(s) in lowercase, no explanations.
-                `,
-              },
-            ],
           });
 
-          console.log("🧠 Session created. Sending prompt...");
+         const prompt = `
+          You are an assistant that answers questions about the current webpage content.
+          Use only the information available in the provided text. 
+          If the answer is not found, respond with: "I couldn’t find that in this page."
 
-          const result = await session.prompt(
-            `
-            User said (in ${userLanguage}): "${text}"
-            Task: Detect if the text includes any actionable command
-            and return the English commands only, separated by commas.
-            `,
-            { outputLanguage: "en" } // ✅ enforce consistent output
-          );
+          The user's question may be in **English (en)**, **Spanish (es)**, **French (fr)**, **Hindi (hi)**, or **Chinese (zh)** only.
+          Detect the language automatically and respond in the **same language** as the user's question.
 
-          console.log("✅ Result:", result);
-          return { success: true, result };
+          Webpage content:
+          """${pageText}"""
+
+          User question: "${question}"
+
+          Respond clearly and concisely in the detected language.
+        `;
+
+
+          const result = await session.prompt(prompt, { outputLanguage: "en" });
+          return { success: true, answer: result };
         },
-        args: [text, userLanguage],
+        args: [question, pageText],
       });
 
       sendResponse(results[0].result);
     } catch (error) {
-      console.error("⚠️ Gemini translation failed:", error);
+      console.error("⚠️ Ask command failed:", error);
       sendResponse({ success: false, error: error.message });
     }
 
-    return true; // Keep the channel open for async sendResponse
+    return true;
   }
+
 });
