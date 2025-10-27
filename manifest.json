@@ -22,7 +22,7 @@
     "<all_urls>"
   ],
   "icons": {
-    "128": "icon.png"
+    "128": "public/icons/icon.png"
   },
   "commands": {
     "toggle_voice_mode": {
