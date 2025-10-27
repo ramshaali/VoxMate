@@ -193,6 +193,13 @@ chrome.runtime.onMessage.addListener((req) => {
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
   if (req.action === "translate_page") translatePage();
+
+  if (req.action === "ask_command") {
+    const { question } = req;
+    if (!question) return;
+    console.log("💬 User asked:", question);
+    handleAskCommand(question);
+  }
 });
 
 // --- existing translatePage() remains the same ---
@@ -328,44 +335,55 @@ function initVoiceRecognition() {
     console.log("🎙️ Voice command:", rawCommand);
 
     const { userLanguage } = await chrome.storage.sync.get("userLanguage");
-    let commands = [rawCommand];
+    let commandObjects = [{ command: "unknown", raw: rawCommand }];
 
     // Wait for Gemini Nano
 
 
-    if (userLanguage !== "en") {
+    // Ask background to translate/mapping via Gemini Nano
       try {
-        // Ask background to translate/mapping via Gemini Nano
-        if (userLanguage !== "en") {
-          try {
-            commands = await translateCommandText(rawCommand, userLanguage);
-          } catch (e) {
-            console.warn("⚠️ Could not map command:", e.message || e);
-            commands = [rawCommand];
-          }
-        }
+        commandObjects = await translateCommandText(rawCommand, userLanguage);
       } catch (e) {
         console.warn("⚠️ Could not map command:", e.message || e);
+        commands = [rawCommand];
       }
-    }
+    
 
-    // Execute commands
-    commands.forEach((cmd) => {
-      if (cmd.includes("read")) startReading();
-      else if (cmd.includes("pause")) pauseReading();
-      else if (cmd.includes("stop")) stopReading();
-      else if (cmd.includes("translate")) translatePage();
-      else if (cmd.includes("show")) {
-        const text = getCommandsText(userLanguage);
-        showCommandsOverlay(text);
-        speakCommands(text);
-      } else if (cmd.includes("summarise") || cmd.includes("ask")) {
-        // Implement your summarise/ask logic here
-        console.log("📝 Trigger summarise/ask function for command:", cmd);
+    commandObjects.forEach(({ command, question, raw }) => {
+      console.log(`⚙️ Executing command: ${command}`, question ? `(Question: ${question})` : "");
+
+      switch (command) {
+        case "read":
+          startReading();
+          break;
+        case "pause":
+          pauseReading();
+          break;
+        case "stop":
+          stopReading();
+          break;
+        case "translate":
+          translatePage();
+          break;
+        case "show commands":
+          const text = getCommandsText(userLanguage);
+          showCommandsOverlay(text);
+          speakCommands(text);
+          break;
+        case "summarise":
+          console.log("📝 Trigger summarise function");
+          break;
+        case "ask":
+          console.log("💬 User asked:", question || raw);
+          // 🔹 Add your `ask` function logic here
+          handleAskCommand(question || raw);
+          break;
+        default:
+          console.log("🤷 Unknown command, ignoring:", raw);
+          break;
       }
     });
   };
-
   recognition.onerror = (e) => console.error("🎙️ Recognition error:", e.error);
   recognition.onend = () => {
     if (voiceActive) recognition.start(); // keep alive
@@ -450,7 +468,6 @@ chrome.runtime.onMessage.addListener((req) => {
   }
 
 });
-
 async function translateCommandText(text, userLanguage = "en") {
   console.log("🎧 Sending command to background for Gemini translation...");
 
@@ -464,23 +481,24 @@ async function translateCommandText(text, userLanguage = "en") {
       (response) => {
         if (chrome.runtime.lastError) {
           console.error("❌ Message error:", chrome.runtime.lastError.message);
-          resolve([text]);
+          resolve([{ command: "unknown", raw: text }]);
           return;
         }
 
         if (!response?.success) {
           console.warn("⚠️ Gemini translation failed:", response?.reason || response?.error);
-          resolve([text]);
+          resolve([{ command: "unknown", raw: text }]);
           return;
         }
 
-        const result = (response.result || "")
-          .split(",")
-          .map((cmd) => cmd.trim().toLowerCase())
-          .filter(Boolean);
+        const result = response.result;
+        console.log("🌍 Gemini interpreted command object:", result);
 
-        console.log("🌍 Gemini interpreted commands:", result);
-        resolve(result.length ? result : [text]);
+        if (result?.command) {
+          resolve([result]); // structured [{ command, question? }]
+        } else {
+          resolve([{ command: "unknown", raw: text }]);
+        }
       }
     );
   });
@@ -599,3 +617,68 @@ window.geminiAPI = {
   isReady: () => geminiReady,
   sendPrompt: sendPrompt
 };
+
+
+async function handleAskCommand(question) {
+  console.log("💬 Asking Gemini:", question);
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      { action: "ask_with_gemini", question },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("❌ Ask message error:", chrome.runtime.lastError.message);
+          showAnswerOverlay("Error: Gemini not available.");
+          resolve();
+          return;
+        }
+
+        if (!response?.success) {
+          console.warn("⚠️ Ask failed:", response?.reason || response?.error);
+          showAnswerOverlay("⚠️ I couldn't find an answer on this page.");
+          resolve();
+          return;
+        }
+
+        const answer = response.answer?.trim() || "No response.";
+        console.log("🧠 Gemini Answer:", answer);
+        showAnswerOverlay(answer);
+        resolve(answer);
+      }
+    );
+  });
+}
+
+
+function showAnswerOverlay(answerText) {
+  let overlay = document.getElementById("gemini-answer-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "gemini-answer-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      max-width: 350px;
+      background: rgba(30, 30, 30, 0.9);
+      color: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      z-index: 99999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: opacity 0.3s ease;
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  overlay.textContent = answerText;
+  overlay.style.opacity = "1";
+
+  setTimeout(() => {
+    overlay.style.opacity = "0";
+    setTimeout(() => overlay.remove(), 1500);
+  }, 8000);
+}
+

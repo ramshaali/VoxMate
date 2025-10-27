@@ -85,4 +85,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) chrome.tabs.sendMessage(tab.id, { action: 'toggle_voice' });
   });
+
+
+  const askBtn = document.getElementById('askBtn');
+const askBox = document.getElementById('askBox');
+const askInput = document.getElementById('askInput');
+const askSendBtn = document.getElementById('askSendBtn');
+
+askBtn.onclick = () => {
+  // Toggle visibility of the input box
+  askBox.style.display = askBox.style.display === 'none' ? 'block' : 'none';
+  if (askBox.style.display === 'block') askInput.focus();
+};
+
+askSendBtn.onclick = async () => {
+  const question = askInput.value.trim();
+  if (!question) {
+    askInput.placeholder = "❗ Enter a question first";
+    return;
+  }
+
+  // Send question to the active tab content script
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
+  }
+
+  askInput.value = '';
+  askBox.style.display = 'none';
+};
+
 });
