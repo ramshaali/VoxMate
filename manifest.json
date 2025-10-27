@@ -2,15 +2,15 @@
   "manifest_version": 3,
   "name": "VoxMate",
   "short_name": "VxM",
-  "version": "1.1",
-  "description": "Translate webpage content using Chrome's on-device Translator API",
+  "version": "1.0",
+  "description": "Your voice-powered web companion. Read, summarize, and ask questions about any webpage - hands-free.",
   "permissions": ["activeTab", "storage", "tabs", "commands", "scripting"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "AI Translator"
+    "default_title": "VoxMate - Your voice web companion"
   },
   "content_scripts": [
     {
