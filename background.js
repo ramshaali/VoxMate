@@ -6,7 +6,7 @@ chrome.runtime.onStartup.addListener(() => console.log("🚀 Background started"
 chrome.runtime.onInstalled.addListener(() => console.log("🧩 Extension installed"));
 
 // ===============================
-// 🟢 INITIAL SETUP
+// INITIAL SETUP
 // ===============================
 chrome.runtime.onInstalled.addListener(async () => {
   const systemLang = navigator.language?.split('-')[0] || 'en';
@@ -15,7 +15,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 // ===============================
-// 🌐 TRANSLATION FUNCTIONS
+// TRANSLATION FUNCTIONS
 // ===============================
 let translatorCache = null;
 
@@ -78,7 +78,7 @@ async function translateText(text, userLanguage) {
 }
 
 // ===============================
-// 📩 MESSAGE HANDLER
+// MESSAGE HANDLER 
 // ===============================
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('📩 Message received in background:', request.action);
@@ -120,15 +120,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     toggleVoiceRecognition?.();
   }
 
-  if (request.action === 'show_commands') {
-    showCommandOverlay?.();
-  }
+ if (request.action === 'show_commands') {
+  console.log("📨 Forwarding 'show_commands' to content.js");
 
-  return true; // Always keep async channel open
+  // Send message to all active tabs (or just the active one)
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'show_commands' });
+    }
+  });
+
+  return true;
+}
+
+  return false; // Always keep async channel open
 });
 
+
+
 // ===============================
-// 🎧 KEYBOARD SHORTCUT + COMMAND SCREEN
+//  KEYBOARD SHORTCUT + COMMAND SCREEN
 // ===============================
 chrome.commands.onCommand.addListener(async (command) => {
   console.log('⌨️ Shortcut pressed:', command);
@@ -141,170 +152,12 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
+
+
+
 // ===============================
-// 🧩 SHOW COMMAND OVERLAY HANDLER
+// PROMPT API
 // ===============================
-async function showCommandOverlay() {
-  const { userLanguage } = await chrome.storage.sync.get("userLanguage");
-  const translations = {
-    en: {
-      title: "🎙️ Voice Commands",
-      commands: [
-        "Say 'read' to start reading",
-        "Say 'pause' to pause",
-        "Say 'stop' to stop reading",
-        "Say 'translate' to translate this page",
-        "Say 'show commands' to display this list"
-      ]
-    },
-    hi: {
-      title: "🎙️ वॉयस कमांड्स",
-      commands: [
-        "'पढ़ो' कहें पढ़ना शुरू करने के लिए",
-        "'रुको' कहें रोकने के लिए",
-        "'बंद करो' कहें समाप्त करने के लिए",
-        "'अनुवाद करो' कहें पृष्ठ अनुवाद के लिए",
-        "'कमांड दिखाओ' कहें यह सूची दिखाने के लिए"
-      ]
-    },
-    es: {
-      title: "🎙️ Comandos de voz",
-      commands: [
-        "Di 'leer' para empezar a leer",
-        "Di 'pausa' para pausar",
-        "Di 'detener' para detener la lectura",
-        "Di 'traducir' para traducir esta página",
-        "Di 'mostrar comandos' para ver esta lista"
-      ]
-    },
-    zh: {
-      title: "🎙️ 语音命令",
-      commands: [
-        "说“读”开始朗读",
-        "说“暂停”暂停朗读",
-        "说“停止”结束朗读",
-        "说“翻译”翻译此页面",
-        "说“显示命令”显示此列表"
-      ]
-    }
-  };
-
-  const text = translations[userLanguage] || translations.en;
-
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]?.id) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: "show_commands", text });
-    }
-  });
-}
-// background.js (Manifest V3 service worker)
-// In background.js, update the handleCheckGemini function:
-
-async function handleCheckGemini(tabId) {
-  try {
-    console.log("🔍 Checking Gemini availability for tab:", tabId);
-    
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      world: 'MAIN',
-      func: async () => {
-        console.log("🌍 Running in MAIN world");
-        console.log("window.ai exists:", !!window.ai);
-        
-        if (!window.ai) {
-          return { 
-            success: false, 
-            reason: 'window.ai not available',
-            debug: { windowAi: typeof window.ai }
-          };
-        }
-        
-        console.log("window.ai.languageModel exists:", !!window.ai.languageModel);
-        
-        if (!window.ai.languageModel) {
-          return { 
-            success: false, 
-            reason: 'window.ai.languageModel not available',
-            debug: { 
-              aiKeys: Object.keys(window.ai),
-              languageModel: typeof window.ai.languageModel
-            }
-          };
-        }
-        
-        try {
-          console.log("📡 Checking availability...");
-          const availability = await window.ai.languageModel.availability();
-          console.log("✓ Availability:", availability);
-          
-          // Return availability info even if not ready
-          if (availability === 'after-download') {
-            console.log("📥 Model needs download - attempting to trigger...");
-            
-            // Try to create session to trigger download
-            try {
-              const session = await window.ai.languageModel.create();
-              window.__geminiSession = session;
-              console.log("✅ Session created! Model downloaded successfully");
-              return { success: true, availability: 'readily' };
-            } catch (error) {
-              console.log("⏳ Download in progress...");
-              return { 
-                success: false, 
-                reason: 'downloading',
-                availability: 'after-download',
-                error: error.message 
-              };
-            }
-          }
-          
-          if (availability === 'readily') {
-            // Try to create a session to verify it really works
-            try {
-              const session = await window.ai.languageModel.create();
-              window.__geminiSession = session;
-              console.log("✅ Session created successfully");
-              return { success: true, availability };
-            } catch (error) {
-              return { 
-                success: false, 
-                reason: 'session creation failed',
-                availability,
-                error: error.message 
-              };
-            }
-          }
-          
-          return { 
-            success: false, 
-            reason: 'not readily available',
-            availability 
-          };
-          
-        } catch (error) {
-          return { 
-            success: false, 
-            reason: 'availability check failed',
-            error: error.message 
-          };
-        }
-      }
-    });
-    
-    const result = results[0].result;
-    console.log("📊 Check result:", result);
-    return result;
-    
-  } catch (error) {
-    console.error("❌ Error executing script:", error);
-    return { 
-      success: false, 
-      reason: 'script execution failed',
-      error: error.message 
-    };
-  }
-}
-
 chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
   if (req.action === "translate_with_gemini") {
   const { text, userLanguage } = req;
@@ -379,7 +232,7 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
           Determine which one command applies, and respond strictly following the JSON schema.
         `;
 
-        // ✅ Structured output JSON Schema
+      
         const responseSchema = {
           type: "object",
           properties: {
@@ -395,8 +248,8 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
 
         try {
           const result = await session.prompt(promptText, {
-            responseConstraint: responseSchema,  // ✅ enforce structured output
-            omitResponseConstraintInput: true,   // ✅ avoid counting schema toward quota
+            responseConstraint: responseSchema,  
+            omitResponseConstraintInput: true,  
           });
 
           console.log("✅ Gemini JSON Result:", result);
@@ -411,7 +264,7 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
 
           return { success: true, result: parsed };
         } catch (err) {
-          console.error("💥 Prompt failed:", err);
+          console.error("Prompt failed:", err);
           return { success: false, error: err?.message || "Prompt failed" };
         }
       },
@@ -419,14 +272,14 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
     });
 
     if (!results?.length || !results[0]?.result) {
-      console.error("❌ No valid results from executeScript");
+      console.error("No valid results from executeScript");
       sendResponse({ success: false, reason: "No valid result returned" });
       return;
     }
 
     sendResponse(results[0].result);
   } catch (error) {
-    console.error("⚠️ Gemini translation failed:", error);
+    console.error("Gemini translation failed:", error);
     sendResponse({ success: false, error: error?.message || "Unknown error" });
   }
 
@@ -439,7 +292,7 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-      // 🧾 Get page content (limited to visible text)
+      // Get page content (limited to visible text)
       const [{ result: pageText }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => document.body.innerText.slice(0, 8000), // limit for token safety
@@ -505,3 +358,111 @@ chrome.runtime.onMessage.addListener(async (req, sender, sendResponse) => {
   }
 
 });
+
+
+//  handleCheckGemini function
+
+async function handleCheckGemini(tabId) {
+  try {
+    console.log("🔍 Checking Gemini availability for tab:", tabId);
+    
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      world: 'MAIN',
+      func: async () => {
+        console.log("🌍 Running in MAIN world");
+        console.log("window.ai exists:", !!window.ai);
+        
+        if (!window.ai) {
+          return { 
+            success: false, 
+            reason: 'window.ai not available',
+            debug: { windowAi: typeof window.ai }
+          };
+        }
+        
+        console.log("window.ai.languageModel exists:", !!window.ai.languageModel);
+        
+        if (!window.ai.languageModel) {
+          return { 
+            success: false, 
+            reason: 'window.ai.languageModel not available',
+            debug: { 
+              aiKeys: Object.keys(window.ai),
+              languageModel: typeof window.ai.languageModel
+            }
+          };
+        }
+        
+        try {
+          console.log("📡 Checking availability...");
+          const availability = await window.ai.languageModel.availability();
+          console.log("✓ Availability:", availability);
+          
+          // Return availability info even if not ready
+          if (availability === 'after-download') {
+            console.log("📥 Model needs download - attempting to trigger...");
+            
+            // Try to create session to trigger download
+            try {
+              const session = await window.ai.languageModel.create();
+              window.__geminiSession = session;
+              console.log("Session created! Model downloaded successfully");
+              return { success: true, availability: 'readily' };
+            } catch (error) {
+              console.log("⏳ Download in progress...");
+              return { 
+                success: false, 
+                reason: 'downloading',
+                availability: 'after-download',
+                error: error.message 
+              };
+            }
+          }
+          
+          if (availability === 'readily') {
+            // Try to create a session to verify it really works
+            try {
+              const session = await window.ai.languageModel.create();
+              window.__geminiSession = session;
+              console.log("Session created successfully");
+              return { success: true, availability };
+            } catch (error) {
+              return { 
+                success: false, 
+                reason: 'session creation failed',
+                availability,
+                error: error.message 
+              };
+            }
+          }
+          
+          return { 
+            success: false, 
+            reason: 'not readily available',
+            availability 
+          };
+          
+        } catch (error) {
+          return { 
+            success: false, 
+            reason: 'availability check failed',
+            error: error.message 
+          };
+        }
+      }
+    });
+    
+    const result = results[0].result;
+    console.log("📊 Check result:", result);
+    return result;
+    
+  } catch (error) {
+    console.error("Error executing script:", error);
+    return { 
+      success: false, 
+      reason: 'script execution failed',
+      error: error.message 
+    };
+  }
+}
