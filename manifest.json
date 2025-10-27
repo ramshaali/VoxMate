@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "AI Translator Chrome Extension",
+  "name": "VoxMate",
+  "short_name": "VxM",
   "version": "1.1",
   "description": "Translate webpage content using Chrome's on-device Translator API",
   "permissions": ["activeTab", "storage", "tabs", "commands", "scripting"],
@@ -22,7 +23,11 @@
     "<all_urls>"
   ],
   "icons": {
-    "128": "public/icons/icon.png"
+    "48": "public/icons/logo-48.png",
+    "64": "public/icons/logo-64.png",
+    "72": "public/icons/logo-72.png",
+    "96": "public/icons/logo-96.png",
+    "256": "public/icons/logo-256.png"
   },
   "commands": {
     "toggle_voice_mode": {
