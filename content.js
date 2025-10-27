@@ -170,7 +170,6 @@ function stopReading() {
 // =======================================
 // Handle messages from popup or background
 // =======================================
-
 chrome.runtime.onMessage.addListener(async (req) => {
   const { userLanguage } = await chrome.storage.sync.get("userLanguage");
   if (req.action === "read_text") startReading();
