@@ -1,199 +1,298 @@
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('🎯 VoxMate popup loaded');
-
-  // Configuration
-  const CONFIG = {
-    supportedLanguages: {
-      en: 'English',
-      hi: 'Hindi', 
-      fr: 'French',
-      es: 'Spanish',
-      zh: 'Chinese'
-    },
-    quickQuestions: {
-      'Summary': 'What is this page about?',
-      'Key Points': 'What are the key points?'
-    }
-  };
-
-  // DOM Elements
-  const elements = {
-    userLanguage: document.getElementById('userLanguage'),
-    saveBtn: document.getElementById('saveBtn'),
-    readBtn: document.getElementById('readBtn'),
-    pauseBtn: document.getElementById('pauseBtn'),
-    stopBtn: document.getElementById('stopBtn'),
-    translateBtn: document.getElementById('translateBtn'),
-    micBtn: document.getElementById('micBtn'),
-    commandsBtn: document.getElementById('commandsBtn'),
-    voiceMode: document.getElementById('voiceMode'),
-    askInput: document.getElementById('askInput'),
-    askSendBtn: document.getElementById('askSendBtn'),
-    status: document.getElementById('status')
-  };
-
-  // Initialize
-  function init() {
-    populateLanguageSelect();
-    loadSavedSettings();
-    attachEventListeners();
+// Modern VoxMate Popup with Calm Intelligence Design
+class VoxMatePopup {
+  constructor() {
+    this.config = {
+      supportedLanguages: {
+        en: 'English',
+        hi: 'Hindi', 
+        fr: 'French',
+        es: 'Spanish',
+        zh: 'Chinese'
+      }
+    };
+    
+    this.elements = {};
+    this.init();
   }
 
-  // Populate language dropdown
-  function populateLanguageSelect() {
-    const select = elements.userLanguage;
-    select.innerHTML = '';
+  async init() {
+    this.cacheElements();
+    this.attachEventListeners();
+    await this.loadSavedSettings();
+    this.setupAutoSave();
+    this.setupTextareaAutoResize();
+    this.applyAccessibilityFeatures();
+  }
+
+  cacheElements() {
+    this.elements = {
+      closeBtn: document.getElementById('closeBtn'),
+      statusToast: document.getElementById('statusToast'),
+      userLanguage: document.getElementById('userLanguage'),
+      translateBtn: document.getElementById('translateBtn'),
+      readBtn: document.getElementById('readBtn'),
+      pauseBtn: document.getElementById('pauseBtn'),
+      stopBtn: document.getElementById('stopBtn'),
+      micBtn: document.getElementById('micBtn'),
+      commandsBtn: document.getElementById('commandsBtn'),
+      askInput: document.getElementById('askInput'),
+      askSendBtn: document.getElementById('askSendBtn'),
+      summaryBtn: document.getElementById('summaryBtn')
+    };
+  }
+
+  attachEventListeners() {
+    // Close button with smooth interaction
+    this.elements.closeBtn.addEventListener('click', () => {
+      this.animateClose().then(() => window.close());
+    });
+
+    // Primary action buttons
+    this.elements.translateBtn.addEventListener('click', () => this.translatePage());
+    this.elements.readBtn.addEventListener('click', () => this.sendAction('read_text'));
+    this.elements.pauseBtn.addEventListener('click', () => this.sendAction('pause_read'));
+    this.elements.stopBtn.addEventListener('click', () => this.sendAction('stop_read'));
     
-    Object.entries(CONFIG.supportedLanguages).forEach(([code, name]) => {
-      const option = document.createElement('option');
-      option.value = code;
-      option.textContent = name;
-      select.appendChild(option);
+    // Voice controls
+    this.elements.micBtn.addEventListener('click', () => this.toggleVoiceControl());
+    this.elements.commandsBtn.addEventListener('click', () => this.sendAction('show_commands'));
+
+    // Ask functionality
+    this.elements.askSendBtn.addEventListener('click', () => this.sendQuestion());
+    this.elements.summaryBtn.addEventListener('click', () => this.sendQuickQuestion('What is this page about?'));
+    this.elements.askInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.sendQuestion();
+      }
+    });
+
+    // Keyboard shortcuts for power users
+    document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+    
+    // Micro-interactions for buttons
+    this.setupButtonInteractions();
+  }
+
+  setupAutoSave() {
+    this.elements.userLanguage.addEventListener('change', () => {
+      this.saveLanguage();
     });
   }
 
-  // Load saved settings
-  async function loadSavedSettings() {
+  setupTextareaAutoResize() {
+    this.elements.askInput.addEventListener('input', () => {
+      this.elements.askInput.style.height = 'auto';
+      this.elements.askInput.style.height = Math.min(this.elements.askInput.scrollHeight, 120) + 'px';
+    });
+  }
+
+  setupButtonInteractions() {
+    // Add micro-interactions to all buttons
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.addEventListener('mousedown', (e) => {
+        e.currentTarget.style.transform = 'scale(0.98)';
+      });
+      
+      btn.addEventListener('mouseup', (e) => {
+        e.currentTarget.style.transform = '';
+      });
+      
+      btn.addEventListener('mouseleave', (e) => {
+        e.currentTarget.style.transform = '';
+      });
+    });
+  }
+
+  applyAccessibilityFeatures() {
+    // Add dyslexic font option if needed
+    const prefersDyslexic = localStorage.getItem('dyslexic-font');
+    if (prefersDyslexic === 'true') {
+      document.body.classList.add('voice-friendly');
+    }
+
+    // Add calm mode for light sensitivity
+    const prefersCalm = localStorage.getItem('calm-mode');
+    if (prefersCalm === 'true') {
+      document.body.classList.add('calm-mode');
+    }
+  }
+
+  async loadSavedSettings() {
     try {
-      const { userLanguage, voiceMode } = await chrome.storage.sync.get(['userLanguage', 'voiceMode']);
+      const { userLanguage } = await chrome.storage.sync.get(['userLanguage']);
       const lang = userLanguage || navigator.language.split('-')[0] || 'en';
-      
-      elements.userLanguage.value = lang;
-      elements.voiceMode.checked = Boolean(voiceMode);
-      
-      showStatus('Settings loaded', 'success');
+      this.elements.userLanguage.value = lang;
     } catch (error) {
       console.error('Error loading settings:', error);
     }
   }
 
-  // Event Listeners
-  function attachEventListeners() {
-    // Language and settings
-    elements.saveBtn.addEventListener('click', saveLanguage);
-    elements.voiceMode.addEventListener('change', toggleVoiceMode);
+  handleKeyboardShortcuts(e) {
+    // Ctrl+Shift+V for voice mode
+    if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+      e.preventDefault();
+      this.toggleVoiceControl();
+    }
     
-    // Reading controls
-    elements.readBtn.addEventListener('click', () => sendAction('read_text'));
-    elements.pauseBtn.addEventListener('click', () => sendAction('pause_read'));
-    elements.stopBtn.addEventListener('click', () => sendAction('stop_read'));
-    elements.translateBtn.addEventListener('click', () => sendAction('translate_page'));
+    // Escape to close popup
+    if (e.key === 'Escape') {
+      this.animateClose().then(() => window.close());
+    }
     
-    // Voice controls
-    elements.micBtn.addEventListener('click', toggleVoiceControl);
-    elements.commandsBtn.addEventListener('click', () => sendAction('show_commands'));
+    // Focus management for accessibility
+    if (e.key === 'Tab' && !e.shiftKey) {
+      this.handleTabNavigation(e);
+    }
+  }
+
+  handleTabNavigation(e) {
+    // Ensure focus stays within popup for keyboard users
+    const focusableElements = document.querySelectorAll('button, select, textarea');
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
     
-    // Ask functionality
-    elements.askSendBtn.addEventListener('click', sendQuestion);
-    elements.askInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendQuestion();
-    });
-    
-    // Quick action buttons
-    document.querySelectorAll('[data-question]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const question = e.target.getAttribute('data-question');
-        sendQuickQuestion(question);
-      });
+    if (e.shiftKey && document.activeElement === firstElement) {
+      lastElement.focus();
+      e.preventDefault();
+    } else if (!e.shiftKey && document.activeElement === lastElement) {
+      firstElement.focus();
+      e.preventDefault();
+    }
+  }
+
+  async animateClose() {
+    return new Promise(resolve => {
+      document.querySelector('.popup-container').style.transform = 'scale(0.95)';
+      document.querySelector('.popup-container').style.opacity = '0';
+      setTimeout(resolve, 150);
     });
   }
 
-  // Core Functions
-  async function saveLanguage() {
-    const lang = elements.userLanguage.value;
+  async saveLanguage() {
+    const lang = this.elements.userLanguage.value;
     try {
       await chrome.storage.sync.set({ userLanguage: lang });
-      showStatus(`Language set to ${CONFIG.supportedLanguages[lang]}`, 'success');
+      this.showToast(`Language set to ${this.config.supportedLanguages[lang]}`);
     } catch (error) {
-      showStatus('Error saving language', 'error');
+      this.showToast('Error saving language');
     }
   }
 
-  async function toggleVoiceMode(e) {
+  async translatePage() {
+    this.setLoading(this.elements.translateBtn, true);
+    
     try {
-      await chrome.storage.sync.set({ voiceMode: e.target.checked });
-      showStatus(`Voice mode ${e.target.checked ? 'enabled' : 'disabled'}`, 'success');
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'translate_page' });
+        this.showToast('Translating page content...');
+        
+        setTimeout(() => {
+          this.setLoading(this.elements.translateBtn, false);
+        }, 2000);
+      }
     } catch (error) {
-      showStatus('Error updating voice mode', 'error');
+      this.setLoading(this.elements.translateBtn, false);
+      this.showToast('Error translating page');
     }
   }
 
-  async function sendAction(action) {
+  async sendAction(action) {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action });
-        showStatus(`Action sent: ${action}`, 'success');
+        
+        if (action === 'toggle_voice') {
+          setTimeout(() => window.close(), 300);
+        }
+        
       }
     } catch (error) {
-      showStatus('Error sending action', 'error');
+      this.showToast('Error performing action');
     }
   }
 
-  async function toggleVoiceControl() {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { action: 'toggle_voice' });
-        showStatus('Voice control toggled', 'success');
-      }
-    } catch (error) {
-      showStatus('Error toggling voice control', 'error');
-    }
+  async toggleVoiceControl() {
+    await this.sendAction('toggle_voice');
   }
 
-  async function sendQuestion() {
-    const question = elements.askInput.value.trim();
+  async sendQuestion() {
+    const question = this.elements.askInput.value.trim();
     if (!question) {
-      showStatus('Please enter a question', 'error');
-      elements.askInput.focus();
+      this.showToast('Please enter a question');
+      this.elements.askInput.focus();
       return;
     }
 
+    this.setLoading(this.elements.askSendBtn, true);
+    
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
-        showStatus('Question sent!', 'success');
-        elements.askInput.value = '';
+        this.showToast('Finding answer...');
+        
+        setTimeout(() => {
+          this.setLoading(this.elements.askSendBtn, false);
+          this.elements.askInput.value = '';
+          this.elements.askInput.style.height = 'auto';
+        }, 1500);
       }
     } catch (error) {
-      showStatus('Error sending question', 'error');
+      this.setLoading(this.elements.askSendBtn, false);
+      this.showToast('Error sending question');
     }
   }
 
-  async function sendQuickQuestion(question) {
+  async sendQuickQuestion(question) {
+    this.setLoading(this.elements.summaryBtn, true);
+    
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
-        showStatus('Quick question sent!', 'success');
+        this.showToast('Generating summary...');
+        
+        setTimeout(() => {
+          this.setLoading(this.elements.summaryBtn, false);
+        }, 1500);
       }
     } catch (error) {
-      showStatus('Error sending quick question', 'error');
+      this.setLoading(this.elements.summaryBtn, false);
+      this.showToast('Error getting summary');
     }
   }
 
-  // UI Feedback
-  function showStatus(message, type = 'info') {
-    const status = elements.status;
-    status.textContent = message;
-    
-    // Reset styles
-    status.style.background = 'rgba(57, 211, 162, 0.1)';
-    status.style.color = 'var(--text)';
-    
-    if (type === 'error') {
-      status.style.background = 'rgba(255, 107, 107, 0.1)';
-    } else if (type === 'success') {
-      status.style.background = 'rgba(57, 211, 162, 0.2)';
+  setLoading(button, isLoading) {
+    if (isLoading) {
+      button.classList.add('loading');
+      const originalHTML = button.innerHTML;
+      button.setAttribute('data-original-html', originalHTML);
+    } else {
+      button.classList.remove('loading');
+      const originalHTML = button.getAttribute('data-original-html');
+      if (originalHTML) {
+        button.innerHTML = originalHTML;
+      }
     }
+  }
+
+  showToast(message) {
+    const toast = this.elements.statusToast;
+    toast.textContent = message;
+    toast.className = 'status-toast show';
     
+    // Auto-hide after 3 seconds
     setTimeout(() => {
-      status.textContent = '';
+      toast.classList.remove('show');
     }, 3000);
   }
+}
 
-  // Initialize the popup
-  init();
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  new VoxMatePopup();
 });
