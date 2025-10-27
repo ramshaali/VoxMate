@@ -1,33 +1,14 @@
 console.log("📜 content.js loaded");
+
+
+// ===============================
+// Highlighting & Reading functions
+// ===============================
 let utterance;
 let textNodes = [];
 let currentNodeIndex = 0;
 let reading = false;
 let paused = false;
-
-// Collect visible text nodes only (exclude <img>, <video>, <script>, etc.)
-function getVisibleTextNodes() {
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        if (!node.parentElement) return NodeFilter.FILTER_REJECT;
-        const tag = node.parentElement.tagName.toLowerCase();
-        if (["script", "style", "img", "video", "svg"].includes(tag))
-          return NodeFilter.FILTER_REJECT;
-        if (getComputedStyle(node.parentElement).display === "none")
-          return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    }
-  );
-  const nodes = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  return nodes;
-}
-
 let lastHighlight = null;
 
 function highlightNode(node) {
@@ -103,7 +84,7 @@ function getVisibleTextNodes() {
 }
 
 async function startReading() {
-  // 🟢 Resume from pause
+  // Resume from pause
   if (paused) {
     console.log("▶️ Resuming reading from index", currentNodeIndex);
     paused = false;
@@ -112,26 +93,26 @@ async function startReading() {
     return;
   }
 
-  // 🆕 Start fresh
+  // Start fresh
   if (!reading) {
     textNodes = getVisibleTextNodes();
     if (!textNodes.length) return alert("No readable text found.");
     reading = true;
     paused = false;
     currentNodeIndex = 0;
-    continueReading(); // 🔁 start loop
+    continueReading(); // start loop
   }
 }
 
 async function continueReading() {
   console.log(
-    `📖 Continuing from node ${currentNodeIndex}/${textNodes.length}`
+    `Continuing from node ${currentNodeIndex}/${textNodes.length}`
   );
 
   for (let i = currentNodeIndex; i < textNodes.length && reading; i++) {
-    if (paused) break; // ⏸️ stop immediately if paused
+    if (paused) break; // stop immediately if paused
     const node = textNodes[i];
-    if (!node) continue; // ✅ safety guard if node was removed
+    if (!node) continue; // safety guard if node was removed
 
     const span = highlightNode(node);
     if (!span) continue;
@@ -142,7 +123,7 @@ async function continueReading() {
 
     await new Promise((resolve) => {
       utterance.onend = () => {
-        // ✅ Double-check span still exists before changing its style
+        // Double-check span still exists before changing its style
         if (span && span.style) {
           span.style.backgroundColor = "transparent";
         }
@@ -151,7 +132,7 @@ async function continueReading() {
       };
 
       utterance.onerror = (err) => {
-        console.error("🛑 Speech error:", err);
+        console.error("Speech error:", err);
         resolve(); // continue with next node
       };
 
@@ -175,7 +156,7 @@ function pauseReading() {
   if (!reading) return;
   paused = true;
   console.log("⏸️ Paused at index", currentNodeIndex);
-  window.speechSynthesis.cancel(); // ❗ cancel current utterance
+  window.speechSynthesis.cancel(); // cancel current utterance
 }
 
 function stopReading() {
@@ -183,16 +164,23 @@ function stopReading() {
   reading = false;
   paused = false;
   currentNodeIndex = 0;
-  console.log("🛑 Reading stopped completely");
+  console.log("Reading stopped completely");
   window.speechSynthesis.cancel();
 }
-
+// =======================================
 // Handle messages from popup or background
-chrome.runtime.onMessage.addListener((req) => {
+// =======================================
+
+chrome.runtime.onMessage.addListener(async (req) => {
+  const { userLanguage } = await chrome.storage.sync.get("userLanguage");
   if (req.action === "read_text") startReading();
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
   if (req.action === "translate_page") translatePage();
+  if (req.action === "show_commands"){
+    const text = getCommandsText(userLanguage);
+    showCommandsOverlay(text);
+  }
 
   if (req.action === "ask_command") {
     const { question } = req;
@@ -202,7 +190,9 @@ chrome.runtime.onMessage.addListener((req) => {
   }
 });
 
-// --- existing translatePage() remains the same ---
+// =======================================
+// TranslatePage
+// =======================================
 async function translatePage() {
   console.log("⚙️ Starting page translation...");
   const bodyText = document.body.innerText.slice(0, 20000);
@@ -262,9 +252,6 @@ function showCommandsOverlay(text) {
   }, 8000);
 }
 
-chrome.runtime.onMessage.addListener((req) => {
-  if (req.action === "show_commands") showCommandsOverlay(req.text);
-});
 
 // helper to speak commands
 function speakCommands(text) {
@@ -310,11 +297,25 @@ function getCommandsText(lang) {
         "Di 'mostrar comandos'",
       ],
     },
+    fr: {
+      title: "🎙️ Commandes vocales",
+      commands: [
+        "Dites 'lire'",
+        "Dites 'pause'",
+        "Dites 'arrêter'",
+        "Dites 'traduire'",
+        "Dites 'afficher les commandes'",
+      ],
+    },
+
   };
 
   return translations[lang] || translations.en;
 }
 
+// =======================================
+// Handle voice Input
+// =======================================
 let recognition;
 let voiceActive = false;
 
@@ -399,7 +400,7 @@ function stopVoiceRecognition() {
     recognition.stop();
     recognition = null;
     voiceActive = false;
-    console.log("🛑 Voice recognition stopped");
+    console.log("Voice recognition stopped");
   }
 }
 
@@ -409,65 +410,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((req) => {
-  if (req.action === "show_commands") {
-    const { text } = req;
 
-    // Remove old overlay if it exists
-    const old = document.getElementById("ai-voice-commands-overlay");
-    if (old) old.remove();
-
-    // Create overlay
-    const overlay = document.createElement("div");
-    overlay.id = "ai-voice-commands-overlay";
-    overlay.style.position = "fixed";
-    overlay.style.top = "20px";
-    overlay.style.right = "20px";
-    overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,0.8)";
-    overlay.style.color = "white";
-    overlay.style.padding = "15px";
-    overlay.style.borderRadius = "12px";
-    overlay.style.fontSize = "14px";
-    overlay.style.maxWidth = "250px";
-    overlay.style.lineHeight = "1.5";
-    overlay.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
-
-    const title = document.createElement("div");
-    title.textContent = text?.title || "🎙️ Voice Commands";
-    title.style.fontWeight = "bold";
-    title.style.marginBottom = "8px";
-    overlay.appendChild(title);
-
-    (
-      text?.commands || [
-        "Say 'read' to start reading",
-        "Say 'pause' to pause",
-        "Say 'stop' to stop reading",
-        "Say 'translate' to translate page",
-      ]
-    ).forEach((cmd) => {
-      const li = document.createElement("div");
-      li.textContent = "• " + cmd;
-      overlay.appendChild(li);
-    });
-
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✖ Close";
-    closeBtn.style.marginTop = "10px";
-    closeBtn.style.background = "#444";
-    closeBtn.style.color = "#fff";
-    closeBtn.style.border = "none";
-    closeBtn.style.borderRadius = "6px";
-    closeBtn.style.padding = "4px 10px";
-    closeBtn.style.cursor = "pointer";
-    closeBtn.addEventListener("click", () => overlay.remove());
-    overlay.appendChild(closeBtn);
-
-    document.body.appendChild(overlay);
-  }
-
-});
 async function translateCommandText(text, userLanguage = "en") {
   console.log("🎧 Sending command to background for Gemini translation...");
 
