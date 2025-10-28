@@ -895,6 +895,7 @@ async function handleSummarisePage() {
 }
 
 
+
 let popupFrame = null;
 
 chrome.runtime.onMessage.addListener(async (msg) => {
@@ -917,12 +918,12 @@ chrome.runtime.onMessage.addListener(async (msg) => {
       right: "40px",
       zIndex: "2147483647",
       width: "420px",
-      height: "600px",
+      height: "550px",
       border: "none",
       borderRadius: "16px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
       overflow: "auto",
-      background: "#ffffff", 
+      background: "transparent", 
     });
 
 
@@ -932,9 +933,16 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     window.addEventListener("message", (e) => {
       const data = e.data || {};
       if (data.type === "voxmate-close") {
-        popupFrame?.remove();
-        popupFrame = null;
+        if (popupFrame) {
+          popupFrame.style.transition = "opacity 0.2s ease";
+          popupFrame.style.opacity = "0";
+          setTimeout(() => {
+            popupFrame.remove();
+            popupFrame = null;
+          }, 100);
+        }
       }
+
     });
 
     // Cleanup on page unload
@@ -944,5 +952,8 @@ chrome.runtime.onMessage.addListener(async (msg) => {
     });
   }
 });
+
+
+
 
 
