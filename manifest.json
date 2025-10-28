@@ -23,7 +23,8 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js"
+        "src/content/content.js",
+        "src/content/overlay.js"
       ],
       "run_at": "document_idle",
       "css": [
