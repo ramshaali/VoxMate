@@ -187,6 +187,20 @@ chrome.runtime.onMessage.addListener(async (req) => {
     console.log("💬 User asked:", question);
     handleAskCommand(question);
   }
+
+  if (req.action === "summarise_page") {
+    handleSummarisePage();
+  }
+
+
+  // --------------------------
+  // Receive summary back
+  // --------------------------
+  if (req.action === "show_summary") {
+    const summary = req.summary || "No summary available.";
+    console.log("📝 Summary received:", summary);
+    showAnswerOverlay(summary);
+  }
 });
 
 // =======================================
@@ -521,6 +535,16 @@ function initVoiceRecognition() {
             break;
           case "summarise":
             console.log("📝 Trigger summarise function");
+
+            handleSummarisePage().then((summary) => {
+              if (summary) {
+                console.log("🧠 Summary ready:", summary);
+                showAnswerOverlay(summary);
+                speakAnswer(summary);
+              }
+            });
+
+
             break;
           case "ask":
             console.log("💬 User asked:", question || raw);
@@ -817,5 +841,54 @@ async function speakAnswer(text) {
     window.speechSynthesis.speak(utter);
   } catch (err) {
     console.error("🔊 speak() failed:", err);
+  }
+}
+
+// =======================================
+// Helper: Handle Page Summarisation
+// =======================================
+async function handleSummarisePage() {
+  console.log("🧠 Starting summarisation...");
+
+  try {
+    const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+    const lang = userLanguage || "en";
+
+    const text = document.body?.innerText || "";
+    if (!text.trim()) {
+      console.warn("⚠️ No readable text on page.");
+      showAnswerOverlay("⚠️ No readable text found on this page.");
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: "run_summarizer", text, lang },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("❌ Summariser error:", chrome.runtime.lastError.message);
+            showAnswerOverlay("⚠️ Summariser not available.");
+            resolve(null);
+            return;
+          }
+
+          if (!response?.success) {
+            console.warn("⚠️ Summarisation failed:", response?.reason || response?.error);
+            showAnswerOverlay("⚠️ Could not summarise this page.");
+            resolve(null);
+            return;
+          }
+
+          const summary = response.summary?.trim() || "No summary generated.";
+          console.log("📝 Summary received:", summary);
+          showAnswerOverlay(summary);
+          resolve(summary);
+        }
+      );
+    });
+  } catch (err) {
+    console.error("❌ Error in handleSummarisePage:", err);
+    showAnswerOverlay("⚠️ Something went wrong while summarising.");
+    return null;
   }
 }

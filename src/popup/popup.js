@@ -4,13 +4,13 @@ class VoxMatePopup {
     this.config = {
       supportedLanguages: {
         en: 'English',
-        hi: 'Hindi', 
+        hi: 'Hindi',
         fr: 'French',
         es: 'Spanish',
         zh: 'Chinese'
       }
     };
-    
+
     this.elements = {};
     this.init();
   }
@@ -52,14 +52,17 @@ class VoxMatePopup {
     this.elements.readBtn.addEventListener('click', () => this.sendAction('read_text'));
     this.elements.pauseBtn.addEventListener('click', () => this.sendAction('pause_read'));
     this.elements.stopBtn.addEventListener('click', () => this.sendAction('stop_read'));
-    
+
     // Voice controls
     this.elements.micBtn.addEventListener('click', () => this.toggleVoiceControl());
     this.elements.commandsBtn.addEventListener('click', () => this.sendAction('show_commands'));
 
+    //Summary
+    this.elements.summaryBtn.addEventListener('click', () => this.summarisePage());
+
     // Ask functionality
     this.elements.askSendBtn.addEventListener('click', () => this.sendQuestion());
-    this.elements.summaryBtn.addEventListener('click', () => this.sendQuickQuestion('What is this page about?'));
+    //this.elements.summaryBtn.addEventListener('click', () => this.sendQuickQuestion('What is this page about?'));
     this.elements.askInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -69,7 +72,7 @@ class VoxMatePopup {
 
     // Keyboard shortcuts for power users
     document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-    
+
     // Micro-interactions for buttons
     this.setupButtonInteractions();
   }
@@ -94,11 +97,11 @@ class VoxMatePopup {
       btn.addEventListener('mousedown', (e) => {
         e.currentTarget.style.transform = 'scale(0.98)';
       });
-      
+
       btn.addEventListener('mouseup', (e) => {
         e.currentTarget.style.transform = '';
       });
-      
+
       btn.addEventListener('mouseleave', (e) => {
         e.currentTarget.style.transform = '';
       });
@@ -135,12 +138,12 @@ class VoxMatePopup {
       e.preventDefault();
       this.toggleVoiceControl();
     }
-    
+
     // Escape to close popup
     if (e.key === 'Escape') {
       this.animateClose().then(() => window.close());
     }
-    
+
     // Focus management for accessibility
     if (e.key === 'Tab' && !e.shiftKey) {
       this.handleTabNavigation(e);
@@ -152,7 +155,7 @@ class VoxMatePopup {
     const focusableElements = document.querySelectorAll('button, select, textarea');
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
-    
+
     if (e.shiftKey && document.activeElement === firstElement) {
       lastElement.focus();
       e.preventDefault();
@@ -182,13 +185,13 @@ class VoxMatePopup {
 
   async translatePage() {
     this.setLoading(this.elements.translateBtn, true);
-    
+
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'translate_page' });
         this.showToast('Translating page content...');
-        
+
         setTimeout(() => {
           this.setLoading(this.elements.translateBtn, false);
         }, 2000);
@@ -204,11 +207,11 @@ class VoxMatePopup {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action });
-        
+
         if (action === 'toggle_voice') {
           setTimeout(() => window.close(), 300);
         }
-        
+
       }
     } catch (error) {
       this.showToast('Error performing action');
@@ -219,6 +222,22 @@ class VoxMatePopup {
     await this.sendAction('toggle_voice');
   }
 
+  async summarisePage() {
+    this.setLoading(this.elements.summaryBtn, true);
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'summarise_page' });
+        this.showToast('Generating summary...');
+      }
+    } catch (error) {
+      this.showToast('Error generating summary');
+    } finally {
+      setTimeout(() => this.setLoading(this.elements.summaryBtn, false), 1500);
+    }
+  }
+  
   async sendQuestion() {
     const question = this.elements.askInput.value.trim();
     if (!question) {
@@ -228,13 +247,13 @@ class VoxMatePopup {
     }
 
     this.setLoading(this.elements.askSendBtn, true);
-    
+
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
         this.showToast('Finding answer...');
-        
+
         setTimeout(() => {
           this.setLoading(this.elements.askSendBtn, false);
           this.elements.askInput.value = '';
@@ -249,13 +268,13 @@ class VoxMatePopup {
 
   async sendQuickQuestion(question) {
     this.setLoading(this.elements.summaryBtn, true);
-    
+
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
         this.showToast('Generating summary...');
-        
+
         setTimeout(() => {
           this.setLoading(this.elements.summaryBtn, false);
         }, 1500);
@@ -284,7 +303,7 @@ class VoxMatePopup {
     const toast = this.elements.statusToast;
     toast.textContent = message;
     toast.className = 'status-toast show';
-    
+
     // Auto-hide after 3 seconds
     setTimeout(() => {
       toast.classList.remove('show');

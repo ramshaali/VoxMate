@@ -124,18 +124,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     toggleVoiceRecognition?.();
   }
 
- if (request.action === 'show_commands') {
-  console.log("📨 Forwarding 'show_commands' to content.js");
+  if (request.action === 'show_commands') {
+    console.log("📨 Forwarding 'show_commands' to content.js");
 
-  // Send message to all active tabs (or just the active one)
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]?.id) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'show_commands' });
-    }
-  });
+    // Send message to all active tabs (or just the active one)
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'show_commands' });
+      }
+    });
 
-  return true;
-}
+    return true;
+  }
 
   return false; // Always keep async channel open
 });
@@ -164,55 +164,55 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ===============================
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
   if (req.action === "translate_with_gemini") {
-  (async () => {
-  const { text, userLanguage } = req;
-  console.log("🎧 Received translate_with_gemini:", { text, userLanguage });
+    (async () => {
+      const { text, userLanguage } = req;
+      console.log("🎧 Received translate_with_gemini:", { text, userLanguage });
 
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      console.error("❌ No active tab found");
-      sendResponse({ success: false, reason: "No active tab found" });
-      return;
-    }
-
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      world: "MAIN",
-      func: async (text, userLanguage) => {
-        const LM = window.ai?.languageModel || window.LanguageModel;
-        if (!LM) {
-          return { success: false, reason: "Language Model API not available in this context" };
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) {
+          console.error("❌ No active tab found");
+          sendResponse({ success: false, reason: "No active tab found" });
+          return;
         }
 
-        async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
-          const start = Date.now();
-          while (Date.now() - start < timeoutMs) {
-            const availability = LM.availability ? await LM.availability() : "readily";
-            if (["available", "readily", "after-download"].includes(availability)) return true;
-            await new Promise((res) => setTimeout(res, intervalMs));
-          }
-          return false;
-        }
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          world: "MAIN",
+          func: async (text, userLanguage) => {
+            const LM = window.ai?.languageModel || window.LanguageModel;
+            if (!LM) {
+              return { success: false, reason: "Language Model API not available in this context" };
+            }
 
-        const ready = await waitUntilReady();
-        if (!ready) return { success: false, reason: "Model not ready" };
+            async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
+              const start = Date.now();
+              while (Date.now() - start < timeoutMs) {
+                const availability = LM.availability ? await LM.availability() : "readily";
+                if (["available", "readily", "after-download"].includes(availability)) return true;
+                await new Promise((res) => setTimeout(res, intervalMs));
+              }
+              return false;
+            }
 
-        console.log("✅ Model ready. Creating session...");
-        const inputLanguages = ["en"];
-        if (userLanguage && userLanguage.toLowerCase() !== "en") {
-          if (userLanguage.toLowerCase() === "es"  || userLanguage.toLowerCase() === "ja"  ){
-          inputLanguages.push(userLanguage);
-          }
-        }
-        const session = await LM.create({
-          expectedInputs: [{ type: "text", languages:inputLanguages}],
-          expectedOutputs: [{ type: "text", languages: ["en"] }],
-          outputLanguage: "en",
-          initialPrompts: [
-            {
-              role: "system",
-              content: `
+            const ready = await waitUntilReady();
+            if (!ready) return { success: false, reason: "Model not ready" };
+
+            console.log("✅ Model ready. Creating session...");
+            const inputLanguages = ["en"];
+            if (userLanguage && userLanguage.toLowerCase() !== "en") {
+              if (userLanguage.toLowerCase() === "es" || userLanguage.toLowerCase() === "ja") {
+                inputLanguages.push(userLanguage);
+              }
+            }
+            const session = await LM.create({
+              expectedInputs: [{ type: "text", languages: inputLanguages }],
+              expectedOutputs: [{ type: "text", languages: ["en"] }],
+              outputLanguage: "en",
+              initialPrompts: [
+                {
+                  role: "system",
+                  content: `
                 You are an AI assistant that interprets spoken or written user commands into
                 one of the following English commands: read, pause, stop, translate,
                 show commands, ask, summarise.
@@ -226,114 +226,114 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
                 - *Only include "question" if the command is "ask" *.
                 - No explanations, text, or formatting outside valid JSON.
               `,
-            },
-          ],
-        });
+                },
+              ],
+            });
 
-        console.log("🧠 Session created. Sending prompt...");
+            console.log("🧠 Session created. Sending prompt...");
 
-        const promptText = `
+            const promptText = `
           User said (in ${userLanguage}): "${text}"
           Determine which one command applies, and respond strictly following the JSON schema.
         `;
 
-      
-        const responseSchema = {
-          type: "object",
-          properties: {
-            command: {
-              type: "string",
-              enum: ["read", "pause", "stop", "translate", "show commands", "ask", "summarise"],
-            },
-            question: { type: "string" },
+
+            const responseSchema = {
+              type: "object",
+              properties: {
+                command: {
+                  type: "string",
+                  enum: ["read", "pause", "stop", "translate", "show commands", "ask", "summarise"],
+                },
+                question: { type: "string" },
+              },
+              required: ["command"],
+              additionalProperties: false,
+            };
+
+            try {
+              const result = await session.prompt(promptText, {
+                responseConstraint: responseSchema,
+                omitResponseConstraintInput: true,
+              });
+
+              console.log("✅ Gemini JSON Result:", result);
+
+              let parsed;
+              try {
+                parsed = JSON.parse(result);
+              } catch (e) {
+                console.warn("⚠️ Invalid JSON:", result);
+                parsed = { command: "unknown", raw: result };
+              }
+
+              return { success: true, result: parsed };
+            } catch (err) {
+              console.error("Prompt failed:", err);
+              return { success: false, error: err?.message || "Prompt failed" };
+            }
           },
-          required: ["command"],
-          additionalProperties: false,
-        };
+          args: [text, userLanguage],
+        });
 
-        try {
-          const result = await session.prompt(promptText, {
-            responseConstraint: responseSchema,  
-            omitResponseConstraintInput: true,  
-          });
-
-          console.log("✅ Gemini JSON Result:", result);
-
-          let parsed;
-          try {
-            parsed = JSON.parse(result);
-          } catch (e) {
-            console.warn("⚠️ Invalid JSON:", result);
-            parsed = { command: "unknown", raw: result };
-          }
-
-          return { success: true, result: parsed };
-        } catch (err) {
-          console.error("Prompt failed:", err);
-          return { success: false, error: err?.message || "Prompt failed" };
+        if (!results?.length || !results[0]?.result) {
+          console.error("No valid results from executeScript");
+          sendResponse({ success: false, reason: "No valid result returned" });
+          return;
         }
-      },
-      args: [text, userLanguage],
-    });
 
-    if (!results?.length || !results[0]?.result) {
-      console.error("No valid results from executeScript");
-      sendResponse({ success: false, reason: "No valid result returned" });
-      return;
-    }
+        sendResponse(results[0].result);
+      } catch (error) {
+        console.error("Gemini translation failed:", error);
+        sendResponse({ success: false, error: error?.message || "Unknown error" });
+      }
+    })();
 
-    sendResponse(results[0].result);
-  } catch (error) {
-    console.error("Gemini translation failed:", error);
-    sendResponse({ success: false, error: error?.message || "Unknown error" });
+    // ✅ Tell Chrome to keep message channel open for async response
+    return true;
   }
-})();
-
-  // ✅ Tell Chrome to keep message channel open for async response
-  return true;
-}
 
 
   if (req.action === "ask_with_gemini") {
-     (async () => {
-    const { question } = req;
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    (async () => {
+      const { question } = req;
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-      // Get page content (limited to visible text)
-      const [{ result: pageText }] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => document.body.innerText.slice(0, 8000), // limit for token safety
-      });
+        // Get page content (limited to visible text)
+        const [{ result: pageText }] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => document.body.innerText.slice(0, 8000), // limit for token safety
+        });
 
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: "MAIN",
-        func: async (question, pageText) => {
-          const LM = window.ai?.languageModel || window.LanguageModel;
-          if (!LM) {
-            return { success: false, reason: "Language Model API not available" };
-          }
-
-          async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
-            const start = Date.now();
-            while (Date.now() - start < timeoutMs) {
-              const availability = LM.availability ? await LM.availability() : "readily";
-              if (["available", "readily", "after-download"].includes(availability)) return true;
-              await new Promise((res) => setTimeout(res, intervalMs));
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          world: "MAIN",
+          func: async (question, pageText) => {
+            const LM = window.ai?.languageModel || window.LanguageModel;
+            if (!LM) {
+              return { success: false, reason: "Language Model API not available" };
             }
-            return false;
-          }
 
-          const ready = await waitUntilReady();
-          if (!ready) return { success: false, reason: "Model not ready" };
+            async function waitUntilReady(timeoutMs = 10000, intervalMs = 500) {
+              const start = Date.now();
+              while (Date.now() - start < timeoutMs) {
+                const availability = LM.availability ? await LM.availability() : "readily";
+                if (["available", "readily", "after-download"].includes(availability)) return true;
+                await new Promise((res) => setTimeout(res, intervalMs));
+              }
+              return false;
+            }
 
-          const session = await LM.create({
-            expectedInputs: [{ type: "text", languages: ["en"] }],
-            expectedOutputs: [{ type: "text", languages: ["en"] }],
-          });
+            const ready = await waitUntilReady();
+            if (!ready) return { success: false, reason: "Model not ready" };
 
-         const prompt = `
+            const session = await LM.create({
+              expectedInputs: [{ type: "text", languages: ["en"] }],
+              expectedOutputs: [{ type: "text", languages: ["en"] }],
+            });
+
+            const prompt = `
           You are an assistant that answers questions about the current webpage content.
           Use only the information available in the provided text. 
           If the answer is not found, respond with: "I couldn’t find that in this page."
@@ -350,23 +350,48 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
         `;
 
 
-          const result = await session.prompt(prompt, { outputLanguage: "en" });
-          return { success: true, answer: result };
-        },
-        args: [question, pageText],
-      });
+            const result = await session.prompt(prompt, { outputLanguage: "en" });
+            return { success: true, answer: result };
+          },
+          args: [question, pageText],
+        });
 
-      sendResponse(results[0].result);
-    } catch (error) {
-      console.error("⚠️ Ask command failed:", error);
-      sendResponse({ success: false, error: error.message });
-    }
+        sendResponse(results[0].result);
+      } catch (error) {
+        console.error("⚠️ Ask command failed:", error);
+        sendResponse({ success: false, error: error.message });
+      }
 
     })();
 
-  // ✅ Tell Chrome to keep message channel open for async response
-  return true;
-}
+    // ✅ Tell Chrome to keep message channel open for async response
+    return true;
+  }
+
+  if (req.action === "run_summarizer") {
+    (async () => {
+      const tabId = sender?.tab?.id;
+      try {
+        const summary = await runSummarizer(req.text, req.lang);
+        console.log("✅ Summary generated.");
+        if (tabId)
+          chrome.tabs.sendMessage(tabId, {
+            action: "show_summary",
+            summary,
+          });
+      } catch (err) {
+        console.error("❌ Summarizer error:", err);
+        if (tabId)
+          chrome.tabs.sendMessage(tabId, {
+            action: "show_summary",
+            summary: "Summarizer unavailable or failed. Please try again later.",
+          });
+      }
+
+    })();
+
+    return true;
+  }
 
 });
 
@@ -376,44 +401,44 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 async function handleCheckGemini(tabId) {
   try {
     console.log("🔍 Checking Gemini availability for tab:", tabId);
-    
+
     const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       world: 'MAIN',
       func: async () => {
         console.log("🌍 Running in MAIN world");
         console.log("window.ai exists:", !!window.ai);
-        
+
         if (!window.ai) {
-          return { 
-            success: false, 
+          return {
+            success: false,
             reason: 'window.ai not available',
             debug: { windowAi: typeof window.ai }
           };
         }
-        
+
         console.log("window.ai.languageModel exists:", !!window.ai.languageModel);
-        
+
         if (!window.ai.languageModel) {
-          return { 
-            success: false, 
+          return {
+            success: false,
             reason: 'window.ai.languageModel not available',
-            debug: { 
+            debug: {
               aiKeys: Object.keys(window.ai),
               languageModel: typeof window.ai.languageModel
             }
           };
         }
-        
+
         try {
           console.log("📡 Checking availability...");
           const availability = await window.ai.languageModel.availability();
           console.log("✓ Availability:", availability);
-          
+
           // Return availability info even if not ready
           if (availability === 'after-download') {
             console.log("📥 Model needs download - attempting to trigger...");
-            
+
             // Try to create session to trigger download
             try {
               const session = await window.ai.languageModel.create();
@@ -422,15 +447,15 @@ async function handleCheckGemini(tabId) {
               return { success: true, availability: 'readily' };
             } catch (error) {
               console.log("⏳ Download in progress...");
-              return { 
-                success: false, 
+              return {
+                success: false,
                 reason: 'downloading',
                 availability: 'after-download',
-                error: error.message 
+                error: error.message
               };
             }
           }
-          
+
           if (availability === 'readily') {
             // Try to create a session to verify it really works
             try {
@@ -439,41 +464,84 @@ async function handleCheckGemini(tabId) {
               console.log("Session created successfully");
               return { success: true, availability };
             } catch (error) {
-              return { 
-                success: false, 
+              return {
+                success: false,
                 reason: 'session creation failed',
                 availability,
-                error: error.message 
+                error: error.message
               };
             }
           }
-          
-          return { 
-            success: false, 
+
+          return {
+            success: false,
             reason: 'not readily available',
-            availability 
+            availability
           };
-          
+
         } catch (error) {
-          return { 
-            success: false, 
+          return {
+            success: false,
             reason: 'availability check failed',
-            error: error.message 
+            error: error.message
           };
         }
       }
     });
-    
+
     const result = results[0].result;
     console.log("📊 Check result:", result);
     return result;
-    
+
   } catch (error) {
     console.error("Error executing script:", error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       reason: 'script execution failed',
-      error: error.message 
+      error: error.message
     };
   }
 }
+
+// ===========================
+// Summarizer Helper
+// ===========================
+async function runSummarizer(text, lang = "en") {
+  if (!("Summarizer" in self)) {
+    throw new Error("Summarizer API not supported in this browser.");
+  }
+
+  // Check availability first
+  const availability = await Summarizer.availability();
+  if (availability === "unavailable") {
+    throw new Error("Summarizer API unavailable or model not downloaded yet.");
+  }
+
+  console.log("📦 Summarizer availability:", availability);
+
+  // Create summarizer with monitored download progress
+  const summarizer = await Summarizer.create({
+    type: "key-points",
+    format: "markdown",
+    length: "medium",
+    expectedInputLanguages: [lang, "en"],
+    outputLanguage: lang,
+    monitor(m) {
+      m.addEventListener("downloadprogress", (e) => {
+        console.log(`📥 Downloaded ${Math.round(e.loaded * 100)}%`);
+      });
+    },
+  });
+
+  console.log("🧠 Summarizer ready. Generating summary...");
+
+  // Clean and summarize
+  const cleanedText = text.replace(/\s+/g, " ").trim();
+  const summary = await summarizer.summarize(cleanedText, {
+    context: "Summarizing page content for the user in a concise format.",
+  });
+
+  return summary;
+}
+
+
