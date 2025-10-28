@@ -176,7 +176,7 @@ chrome.runtime.onMessage.addListener(async (req) => {
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
   if (req.action === "translate_page") translatePage();
-  if (req.action === "show_commands"){
+  if (req.action === "show_commands") {
     const text = getCommandsText(userLanguage);
     showCommandsOverlay(text);
   }
@@ -260,6 +260,8 @@ function speakCommands(text) {
   utter.lang = chrome.storage.sync.get("userLanguage") || "en";
   window.speechSynthesis.speak(utter);
 }
+
+
 function getCommandsText(lang) {
   const translations = {
     en: {
@@ -337,17 +339,14 @@ function initVoiceRecognition() {
     const { userLanguage } = await chrome.storage.sync.get("userLanguage");
     let commandObjects = [{ command: "unknown", raw: rawCommand }];
 
-    // Wait for Gemini Nano
-
-
     // Ask background to translate/mapping via Gemini Nano
-      try {
-        commandObjects = await translateCommandText(rawCommand, userLanguage);
-      } catch (e) {
-        console.warn("⚠️ Could not map command:", e.message || e);
-        commands = [rawCommand];
-      }
-    
+    try {
+      commandObjects = await translateCommandText(rawCommand, userLanguage);
+    } catch (e) {
+      console.warn("⚠️ Could not map command:", e.message || e);
+      commands = [rawCommand];
+    }
+
 
     commandObjects.forEach(({ command, question, raw }) => {
       console.log(`⚙️ Executing command: ${command}`, question ? `(Question: ${question})` : "");
@@ -375,9 +374,14 @@ function initVoiceRecognition() {
           break;
         case "ask":
           console.log("💬 User asked:", question || raw);
-          // 🔹 Add your `ask` function logic here
-          handleAskCommand(question || raw);
+          handleAskCommand(question || raw).then((answer) => {
+            if (answer) {
+              console.log("🔊 Speaking from voice recognition context...");
+              speakAnswer(answer);
+            }
+          });
           break;
+
         default:
           console.log("🤷 Unknown command, ignoring:", raw);
           break;
@@ -451,20 +455,20 @@ let geminiReady = false;
 
 async function initGeminiAfterGesture() {
   console.log("🚀 Checking Gemini availability...");
-  
+
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'checkGemini'
     });
-    
+
     console.log("📬 Gemini check result:", response);
-    
+
     if (response.success) {
       geminiReady = true;
       console.log("✅ Gemini Nano is ready!");
       console.log("   Availability:", response.availability);
       hideCommandsOverlay();
-      
+
       // Now you can send prompts
       // await sendPrompt("Your prompt here");
     } else {
@@ -495,12 +499,12 @@ async function initGeminiAfterGesture() {
 async function sendPrompt(prompt) {
   try {
     console.log("📤 Sending prompt:", prompt);
-    
+
     const response = await chrome.runtime.sendMessage({
       action: 'prompt',
       prompt: prompt
     });
-    
+
     if (response.success) {
       console.log("📥 Response:", response.result);
       return response.result;
@@ -518,17 +522,17 @@ async function sendPrompt(prompt) {
 function setupUserGestureForGemini() {
   console.log("🎯 Waiting for user gesture...");
   const gestureEvents = ["click", "keydown", "touchstart"];
-  
+
   const gestureHandler = async () => {
     console.log("👆 User gesture detected!");
     await initGeminiAfterGesture();
-    
-    gestureEvents.forEach((evt) => 
+
+    gestureEvents.forEach((evt) =>
       document.removeEventListener(evt, gestureHandler)
     );
   };
-  
-  gestureEvents.forEach((evt) => 
+
+  gestureEvents.forEach((evt) =>
     document.addEventListener(evt, gestureHandler, { once: true })
   );
 }
@@ -585,6 +589,13 @@ async function handleAskCommand(question) {
         const answer = response.answer?.trim() || "No response.";
         console.log("🧠 Gemini Answer:", answer);
         showAnswerOverlay(answer);
+
+        if (answer && voiceActive) {
+          console.log("🔊 Speaking the answer...");
+          speakAnswer(answer);
+        }
+
+
         resolve(answer);
       }
     );
@@ -624,3 +635,35 @@ function showAnswerOverlay(answerText) {
   }, 8000);
 }
 
+
+
+// -------------------------------
+// Speak answer helper
+// -------------------------------
+async function speakAnswer(text) {
+  // Stop any current speech so answers don't overlap
+  try {
+    window.speechSynthesis.cancel();
+  } catch (e) {
+    console.warn("Speech cancel failed", e);
+  }
+
+  // get user language from storage (your code uses await chrome.storage.sync.get elsewhere)
+  const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+  const lang = userLanguage || "en";
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  utter.onend = () => {
+    console.log("🔊 Finished speaking the answer");
+  };
+  utter.onerror = (err) => {
+    console.error("🔊 Speech error:", err);
+  };
+
+  try {
+    window.speechSynthesis.speak(utter);
+  } catch (err) {
+    console.error("🔊 speak() failed:", err);
+  }
+}
