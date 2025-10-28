@@ -1,0 +1,69 @@
+{
+  "extensionTitle": {
+    "message": "VoxMate - Your Voice Web Companion"
+  },
+  "extensionSubtitle": {
+    "message": "Let the web speak to everyone."
+  },
+  "closeButton": {
+    "message": "Close extension",
+    "description": "Close button aria-label"
+  },
+  "languageTranslation": {
+    "message": "Language & Translation"
+  },
+  "selectLanguage": {
+    "message": "Select your preferred language"
+  },
+  "translateButton": {
+    "message": "Translate Page"
+  },
+  "readingControls": {
+    "message": "Reading Controls"
+  },
+  "startReading": {
+    "message": "Start reading page content"
+  },
+  "readButton": {
+    "message": "Read"
+  },
+  "pauseButton": {
+    "message": "Pause"
+  },
+  "stopButton": {
+    "message": "Stop"
+  },
+  "voiceControls": {
+    "message": "Voice Controls"
+  },
+  "startVoice": {
+    "message": "Start voice commands"
+  },
+  "voiceCommands": {
+    "message": "Voice Commands"
+  },
+  "voiceHint": {
+    "message": "Press $SHORTCUT$ to start and stop voice mode",
+    "placeholders": {
+      "SHORTCUT": {
+        "content": "$1",
+        "example": "Ctrl+Shift+V"
+      }
+    }
+  },
+  "askQuestions": {
+    "message": "Ask Questions"
+  },
+  "askPlaceholder": {
+    "message": "Ask anything about this page..."
+  },
+  "sendQuestion": {
+    "message": "Send question"
+  },
+  "getSummary": {
+    "message": "Get Summary"
+  },
+  "pageSummary": {
+    "message": "Get page summary"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "extensionTitle": {
+    "message": "VoxMate - Votre Compagnon Web Vocal"
+  },
+  "extensionSubtitle": {
+    "message": "Laissez le web parler à tout le monde."
+  },
+  "closeButton": {
+    "message": "Fermer l'extension"
+  },
+  "languageTranslation": {
+    "message": "Langue et Traduction"
+  },
+  "selectLanguage": {
+    "message": "Sélectionnez votre langue préférée"
+  },
+  "translateButton": {
+    "message": "Traduire la Page"
+  },
+  "readingControls": {
+    "message": "Contrôles de Lecture"
+  },
+  "startReading": {
+    "message": "Commencer la lecture du contenu de la page"
+  },
+  "readButton": {
+    "message": "Lire"
+  },
+  "pauseButton": {
+    "message": "Pause"
+  },
+  "stopButton": {
+    "message": "Arrêter"
+  },
+  "voiceControls": {
+    "message": "Contrôles Vocaux"
+  },
+  "startVoice": {
+    "message": "Démarrer les commandes vocales"
+  },
+  "voiceCommands": {
+    "message": "Commandes Vocales"
+  },
+  "voiceHint": {
+    "message": "Appuyez sur $SHORTCUT$ pour démarrer et arrêter le mode vocal",
+    "placeholders": {
+      "SHORTCUT": {
+        "content": "$1",
+        "example": "Ctrl+Shift+V"
+      }
+    }
+  },
+  "askQuestions": {
+    "message": "Poser des Questions"
+  },
+  "askPlaceholder": {
+    "message": "Posez n'importe quelle question sur cette page..."
+  },
+  "sendQuestion": {
+    "message": "Envoyer la question"
+  },
+  "getSummary": {
+    "message": "Obtenir un Résumé"
+  },
+  "pageSummary": {
+    "message": "Obtenir le résumé de la page"
+  }
+}

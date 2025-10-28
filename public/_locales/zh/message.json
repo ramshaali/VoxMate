@@ -1,0 +1,68 @@
+{
+  "extensionTitle": {
+    "message": "VoxMate - 您的语音网页伴侣"
+  },
+  "extensionSubtitle": {
+    "message": "让网络与每个人对话。"
+  },
+  "closeButton": {
+    "message": "关闭扩展"
+  },
+  "languageTranslation": {
+    "message": "语言与翻译"
+  },
+  "selectLanguage": {
+    "message": "选择您的首选语言"
+  },
+  "translateButton": {
+    "message": "翻译页面"
+  },
+  "readingControls": {
+    "message": "阅读控制"
+  },
+  "startReading": {
+    "message": "开始阅读页面内容"
+  },
+  "readButton": {
+    "message": "阅读"
+  },
+  "pauseButton": {
+    "message": "暂停"
+  },
+  "stopButton": {
+    "message": "停止"
+  },
+  "voiceControls": {
+    "message": "语音控制"
+  },
+  "startVoice": {
+    "message": "开始语音命令"
+  },
+  "voiceCommands": {
+    "message": "语音命令"
+  },
+  "voiceHint": {
+    "message": "按 $SHORTCUT$ 开始和停止语音模式",
+    "placeholders": {
+      "SHORTCUT": {
+        "content": "$1",
+        "example": "Ctrl+Shift+V"
+      }
+    }
+  },
+  "askQuestions": {
+    "message": "提问"
+  },
+  "askPlaceholder": {
+    "message": "关于此页面的任何问题..."
+  },
+  "sendQuestion": {
+    "message": "发送问题"
+  },
+  "getSummary": {
+    "message": "获取摘要"
+  },
+  "pageSummary": {
+    "message": "获取页面摘要"
+  }
+}
