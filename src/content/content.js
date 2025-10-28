@@ -193,10 +193,6 @@ chrome.runtime.onMessage.addListener(async (req) => {
     handleSummarisePage();
   }
 
-  // if (req.action === "show_summary") {
-  //   const summary = req.summary || "No summary available.";
-  //   window.voxmateOverlay.showInfo(summary, "Page Summary");
-  // }
 });
 
 // =======================================
@@ -794,11 +790,6 @@ async function handleAskCommand(question) {
           console.log("🧠 Gemini Answer:", answer);
           
           window.voxmateOverlay.showInfo(answer, "Answer");
-
-          if (answer && voiceActive) {
-            console.log("🔊 Speaking the answer...");
-            speakAnswer(answer);
-          }
 
           resolve(answer);
         }

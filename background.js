@@ -370,26 +370,20 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
   if (req.action === "run_summarizer") {
     (async () => {
-      const tabId = sender?.tab?.id;
       try {
         const summary = await runSummarizer(req.text, req.lang);
         console.log("✅ Summary generated.");
-        if (tabId)
-          chrome.tabs.sendMessage(tabId, {
-            action: "show_summary",
-            summary,
-          });
+        sendResponse({ success: true, summary });
       } catch (err) {
         console.error("❌ Summarizer error:", err);
-        if (tabId)
-          chrome.tabs.sendMessage(tabId, {
-            action: "show_summary",
-            summary: "Summarizer unavailable or failed. Please try again later.",
-          });
+        sendResponse({
+          success: false,
+          summary: "Summarizer unavailable or failed. Please try again later.",
+        });
       }
-
     })();
 
+    // ✅ Keep channel open for async sendResponse
     return true;
   }
 

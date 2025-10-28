@@ -177,7 +177,6 @@ class VoxMatePopup {
     const lang = this.elements.userLanguage.value;
     try {
       await chrome.storage.sync.set({ userLanguage: lang });
-      this.showToast(`Language set to ${this.config.supportedLanguages[lang]}`);
     } catch (error) {
       this.showToast('Error saving language');
     }
@@ -190,7 +189,6 @@ class VoxMatePopup {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'translate_page' });
-        this.showToast('Translating page content...');
 
         setTimeout(() => {
           this.setLoading(this.elements.translateBtn, false);
@@ -198,7 +196,6 @@ class VoxMatePopup {
       }
     } catch (error) {
       this.setLoading(this.elements.translateBtn, false);
-      this.showToast('Error translating page');
     }
   }
 
@@ -214,7 +211,6 @@ class VoxMatePopup {
 
       }
     } catch (error) {
-      this.showToast('Error performing action');
     }
   }
 
@@ -229,15 +225,13 @@ class VoxMatePopup {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'summarise_page' });
-        this.showToast('Generating summary...');
       }
     } catch (error) {
-      this.showToast('Error generating summary');
     } finally {
       setTimeout(() => this.setLoading(this.elements.summaryBtn, false), 1500);
     }
   }
-  
+
   async sendQuestion() {
     const question = this.elements.askInput.value.trim();
     if (!question) {
@@ -252,7 +246,6 @@ class VoxMatePopup {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
-        this.showToast('Finding answer...');
 
         setTimeout(() => {
           this.setLoading(this.elements.askSendBtn, false);
@@ -262,7 +255,6 @@ class VoxMatePopup {
       }
     } catch (error) {
       this.setLoading(this.elements.askSendBtn, false);
-      this.showToast('Error sending question');
     }
   }
 
@@ -273,7 +265,6 @@ class VoxMatePopup {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { action: 'ask_command', question });
-        this.showToast('Generating summary...');
 
         setTimeout(() => {
           this.setLoading(this.elements.summaryBtn, false);
@@ -281,7 +272,6 @@ class VoxMatePopup {
       }
     } catch (error) {
       this.setLoading(this.elements.summaryBtn, false);
-      this.showToast('Error getting summary');
     }
   }
 
