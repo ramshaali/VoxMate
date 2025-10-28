@@ -27,7 +27,7 @@ class VoxMateOverlay {
       max-width: 340px;
       width: auto;
       background: var(--voxmate-surface, rgba(255, 255, 255, 0.75));
-      color: var(--voxmate-text, #1a1a1a);
+      color: var(--voxmate-text, #101217);
       border-radius: 14px;
       padding: 16px 20px;
       z-index: 10000;
@@ -46,6 +46,8 @@ class VoxMateOverlay {
       transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
       max-height: 400px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     `;
 
     document.body.appendChild(this.overlay);
@@ -59,15 +61,33 @@ class VoxMateOverlay {
 
     const styles = `
       :root {
+        --voxmate-primary: #2B2F8A;
+        --voxmate-primary-light: #4548C7;
+        --voxmate-primary-dark: #1F237A;
+        --voxmate-amber: #FFB54A;
+        --voxmate-amber-light: #FFC97A;
+        --voxmate-amber-dark: #E69C3E;
+        --voxmate-mint: #39D3A2;
+        --voxmate-mint-light: #6BE0BB;
+        --voxmate-mint-dark: #2FC495;
+        --voxmate-bg: #F7F8FB;
+        --voxmate-surface: #FFFFFF;
+        --voxmate-text-primary: #101217;
+        --voxmate-text-secondary: #4A5568;
+        --voxmate-text-tertiary: #718096;
+        --voxmate-border: #E2E8F0;
+        --voxmate-focus: #00D1FF;
+        --voxmate-error: #E53E3E;
+        --voxmate-success: #38A169;
+
         --voxmate-surface-light: rgba(255, 255, 255, 0.75);
         --voxmate-surface-dark: rgba(28, 28, 30, 0.75);
-        --voxmate-text-light: #1a1a1a;
+        --voxmate-text-light: #101217;
         --voxmate-text-dark: #ffffff;
-        --voxmate-accent: #2B2F8A;
-        --voxmate-accent-light: #4548C7;
-        --voxmate-success: #30D158;
-        --voxmate-warning: #FF9F0A;
-        --voxmate-error: #FF453A;
+        --voxmate-accent: var(--voxmate-primary);
+        --voxmate-accent-light: var(--voxmate-primary-light);
+        --voxmate-warning: var(--voxmate-amber);
+        --voxmate-error: var(--voxmate-error);
       }
 
       #voxmate-overlay {
@@ -87,6 +107,8 @@ class VoxMateOverlay {
         align-items: flex-start;
         gap: 12px;
         width: 100%;
+        flex: 1;
+        min-height: 0;
       }
 
       .voxmate-toast-icon {
@@ -94,11 +116,17 @@ class VoxMateOverlay {
         width: 18px;
         height: 18px;
         margin-top: 1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .voxmate-toast-message {
         flex: 1;
         min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
       }
 
       .voxmate-toast-title {
@@ -110,6 +138,7 @@ class VoxMateOverlay {
         align-items: center;
         gap: 8px;
         letter-spacing: -0.01em;
+        flex-shrink: 0;
       }
 
       .voxmate-toast-text {
@@ -118,6 +147,45 @@ class VoxMateOverlay {
         line-height: 1.4;
         color: var(--voxmate-text);
         opacity: 0.85;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .voxmate-toast-text-scrollable {
+        overflow-y: auto;
+        max-height: 300px;
+        padding-right: 4px;
+      }
+
+      /* Sleek scrollbar styling */
+      .voxmate-toast-text-scrollable::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .voxmate-toast-text-scrollable::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 2px;
+      }
+
+      .voxmate-toast-text-scrollable::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 2px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .voxmate-toast-text-scrollable:hover::-webkit-scrollbar-thumb {
+        opacity: 1;
+      }
+
+      .voxmate-toast-text-scrollable::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.4);
+      }
+
+      /* Firefox scrollbar */
+      .voxmate-toast-text-scrollable {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
       }
 
       .voxmate-toast-close {
@@ -164,7 +232,7 @@ class VoxMateOverlay {
 
       .voxmate-loading-bar {
         height: 100%;
-        background: linear-gradient(90deg, var(--voxmate-accent), var(--voxmate-accent-light));
+        background: linear-gradient(90deg, var(--voxmate-primary), var(--voxmate-primary-light));
         border-radius: 2px;
         animation: voxmate-loading-progress 2s ease-in-out infinite;
         transform-origin: left;
@@ -185,21 +253,21 @@ class VoxMateOverlay {
       .voxmate-commands-grid {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        margin-top: 8px;
+        gap: 2px;
+        margin-top: 6px;
       }
 
       .voxmate-command-item {
         display: flex;
         align-items: flex-start;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 8px;
+        gap: 6px;
+        padding: 4px 6px;
+        border-radius: 6px;
         transition: all 0.2s ease;
         font-size: 13px;
         line-height: 1.3;
-        background: rgba(0, 0, 0, 0.03);
-        border: 1px solid rgba(0, 0, 0, 0.05);
+        background: rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.04);
       }
 
       .voxmate-command-item:hover {
@@ -209,11 +277,11 @@ class VoxMateOverlay {
       }
 
       .voxmate-command-bullet {
-        color: var(--voxmate-accent);
+        color: var(--voxmate-primary);
         font-weight: 700;
         font-size: 12px;
         flex-shrink: 0;
-        width: 14px;
+        width: 12px;
         margin-top: 1px;
       }
 
@@ -230,7 +298,7 @@ class VoxMateOverlay {
         border-radius: 10px;
         font-size: 11px;
         font-weight: 700;
-        background: var(--voxmate-accent);
+        background: var(--voxmate-primary);
         color: white;
         letter-spacing: 0.02em;
       }
@@ -246,7 +314,7 @@ class VoxMateOverlay {
 
       .voxmate-toast-text strong {
         font-weight: 700;
-        color: var(--voxmate-accent);
+        color: var(--voxmate-primary);
       }
 
       .voxmate-toast-text code {
@@ -261,8 +329,8 @@ class VoxMateOverlay {
       /* Dark mode adjustments */
       @media (prefers-color-scheme: dark) {
         .voxmate-command-item {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .voxmate-command-item:hover {
@@ -280,6 +348,14 @@ class VoxMateOverlay {
 
         .voxmate-toast-text code {
           background: rgba(255, 255, 255, 0.1);
+        }
+
+        .voxmate-toast-text-scrollable::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .voxmate-toast-text-scrollable::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
         }
       }
     `;
@@ -310,9 +386,10 @@ class VoxMateOverlay {
       title = '',
       type = 'info',
       autoHide = true,
-      duration = 60000,
+      duration = 60000, // Default to 1 minute for info messages
       showClose = true,
-      loadingId = null
+      loadingId = null,
+      scrollable = false
     } = options;
 
     // If we're currently removing an overlay, wait a tiny bit
@@ -327,6 +404,9 @@ class VoxMateOverlay {
     }
 
     const overlay = this.createOverlay();
+
+    // Add scrollable class if content might be long
+    const textClass = scrollable ? 'voxmate-toast-text voxmate-toast-text-scrollable' : 'voxmate-toast-text';
 
     // Build compact macOS-style structure
     overlay.innerHTML = `
@@ -344,7 +424,7 @@ class VoxMateOverlay {
         </div>
         <div class="voxmate-toast-message">
           ${title ? `<div class="voxmate-toast-title">${title}${type === 'loading' ? '<span class="voxmate-status-badge">Processing</span>' : ''}</div>` : ''}
-          <div class="voxmate-toast-text">
+          <div class="${textClass}">
             ${type === 'loading' ? this.createLoadingContent(content) : this.formatContent(content)}
           </div>
         </div>
@@ -378,19 +458,25 @@ class VoxMateOverlay {
 
   getIcon(type) {
     const icons = {
-      info: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+      info: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2F8A" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <circle cx="12" cy="8" r="1" fill="#2B2F8A" stroke="none"/>
       </svg>`,
-      success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      success: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2F8A" stroke-width="2">
         <path d="M20 6L9 17l-5-5"></path>
       </svg>`,
-      warning: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+      warning: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2F8A" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
       </svg>`,
-      error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>
+      error: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2F8A" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
       </svg>`,
-      loading: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      loading: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2B2F8A" stroke-width="2">
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
       </svg>`
     };
@@ -480,20 +566,40 @@ class VoxMateOverlay {
     });
   }
 
-  showInfo(content, title = '') {
-    return this.show(content, { title, type: 'info', duration: 8000 });
+  showInfo(content, title = '', duration = 60000) { // Default to 1 minute for info
+    return this.show(content, { 
+      title, 
+      type: 'info', 
+      duration,
+      scrollable: true // Make info messages scrollable by default
+    });
   }
 
   showSuccess(content, title = '') {
-    return this.show(content, { title, type: 'success', duration: 4000 });
+    return this.show(content, { 
+      title, 
+      type: 'success', 
+      duration: 4000,
+      scrollable: content.length > 200 // Scrollable if content is long
+    });
   }
 
   showError(content, title = '') {
-    return this.show(content, { title, type: 'error', autoHide: false });
+    return this.show(content, { 
+      title, 
+      type: 'error', 
+      autoHide: false,
+      scrollable: true // Errors are often longer, make scrollable
+    });
   }
 
   showWarning(content, title = '') {
-    return this.show(content, { title, type: 'warning', duration: 6000 });
+    return this.show(content, { 
+      title, 
+      type: 'warning', 
+      duration: 6000,
+      scrollable: content.length > 200
+    });
   }
 
   showCommands(commandsData) {
@@ -512,6 +618,22 @@ class VoxMateOverlay {
       title: commandsData.title, 
       duration: 12000
     });
+  }
+
+  // New method for showing Q&A format
+  showQuestionAnswer(question, answer, title = 'Gemini Answer') {
+    const content = `
+      <div style="margin-bottom: 12px;">
+        <strong style="color: var(--voxmate-primary);">Question:</strong>
+        <p style="margin: 4px 0 0 0; opacity: 0.9;">${question}</p>
+      </div>
+      <div>
+        <strong style="color: var(--voxmate-primary);">Answer:</strong>
+        <div style="margin-top: 4px;">${this.formatContent(answer)}</div>
+      </div>
+    `;
+    
+    return this.showInfo(content, title, 60000); // 1 minute for Q&A
   }
 }
 

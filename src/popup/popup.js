@@ -4,7 +4,6 @@ class VoxMatePopup {
     this.config = {
       supportedLanguages: {
         en: 'English',
-        hi: 'Hindi',
         fr: 'French',
         es: 'Spanish',
         zh: 'Chinese'

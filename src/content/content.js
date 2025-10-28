@@ -293,14 +293,6 @@ function mapLocalCommand(rawText, userLang = "en") {
       "show commands": ["show commands", "commands", "help", "what can you say", "what can i say"],
       summarise: ["summarise", "summarize", "summary", "summarize this", "summarise this"],
     },
-    hi: {
-      read: ["पढ़ो", "पढ़ो"],
-      pause: ["रुको", "ठहरो"],
-      stop: ["बंद करो", "रोक दो"],
-      translate: ["अनुवाद", "अनुवाद करो", "अनुवाद करो पेज"],
-      "show commands": ["कमांड दिखाओ", "कमांड", "सहायता", "help"],
-      summarise: ["सारांश", "सारांश बनाओ"],
-    },
     zh: {
       read: ["读", "朗读"],
       pause: ["暂停"],
@@ -413,7 +405,7 @@ async function speakCommands(text) {
 function getCommandsText(lang) {
   const translations = {
     en: {
-      title: "🎙️ Voice Commands",
+      title: "Voice Commands",
       commands: [
         "Say 'read'",
         "Say 'pause'",
@@ -423,21 +415,11 @@ function getCommandsText(lang) {
       ],
     },
     zh: {
-      title: "🎙️ 语音命令",
+      title: "语音命令",
       commands: ["说“读”", "说“暂停”", "说“停止”", "说“翻译”", "说“显示命令”"],
     },
-    hi: {
-      title: "🎙️ वॉयस कमांड्स",
-      commands: [
-        "'पढ़ो' कहें",
-        "'रुको' कहें",
-        "'बंद करो' कहें",
-        "'अनुवाद करो' कहें",
-        "'कमांड दिखाओ' कहें",
-      ],
-    },
     es: {
-      title: "🎙️ Comandos de voz",
+      title: "Comandos de voz",
       commands: [
         "Di 'leer'",
         "Di 'pausa'",
@@ -447,7 +429,7 @@ function getCommandsText(lang) {
       ],
     },
     fr: {
-      title: "🎙️ Commandes vocales",
+      title: "Commandes vocales",
       commands: [
         "Dites 'lire'",
         "Dites 'pause'",
@@ -482,7 +464,6 @@ function initVoiceRecognition() {
     // Map small codes to speech recognition locales
     const recognitionLangMap = {
       en: "en-US",
-      hi: "hi-IN",
       zh: "zh-CN",
       es: "es-ES",
       fr: "fr-FR",
@@ -748,6 +729,7 @@ window.geminiAPI = {
 };
 
 
+// handleAskCommand function
 async function handleAskCommand(question) {
   const loadingId = 'ask_' + Date.now();
   
@@ -789,7 +771,8 @@ async function handleAskCommand(question) {
           const answer = response.answer?.trim() || "No clear answer found in the page content.";
           console.log("🧠 Gemini Answer:", answer);
           
-          window.voxmateOverlay.showInfo(answer, "Answer");
+          // Use the new Q&A format that shows both question and answer
+          window.voxmateOverlay.showQuestionAnswer(question, answer, "Gemini Answer");
 
           resolve(answer);
         }
