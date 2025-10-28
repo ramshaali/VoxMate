@@ -174,102 +174,109 @@ chrome.runtime.onMessage.addListener(async (req) => {
   if (req.action === "read_text") startReading();
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
-  // Show loading states for various operations
-  if (req.action === "translate_page") {
-    const loadingOverlay = window.voxmateOverlay.showLoading(
-      "Translating page content... This may take a moment.",
-      "Translation in Progress"
-    );
-    await translatePage();
-    window.voxmateOverlay.removeOverlay();
-    window.voxmateOverlay.showSuccess("Page translation completed!", "Translation Finished");
-  }
+  if (req.action === "translate_page") translatePage();
+
 
   if (req.action === "show_commands") {
     const text = getCommandsText(userLanguage);
-    showCommandsOverlay(text);
+    window.voxmateOverlay.showCommands(text);
   }
 
   if (req.action === "ask_command") {
     const { question } = req;
     if (!question) return;
-
-    const loadingOverlay = window.voxmateOverlay.showLoading(
-      "Analyzing page content and finding the best answer...",
-      "Finding Answer"
-    );
-
-    await handleAskCommand(question);
-    window.voxmateOverlay.removeOverlay();
+    console.log("💬 User asked:", question);
+    handleAskCommand(question);
   }
-
 
   if (req.action === "summarise_page") {
-    const loadingOverlay = window.voxmateOverlay.showLoading(
-      "Reading page content and generating concise summary...",
-      "Generating Summary"
-    );
-
-    await handleSummarisePage();
-    window.voxmateOverlay.removeOverlay();
+    handleSummarisePage();
   }
 
-  // Receive summary/answer back from background
-  if (req.action === "show_summary") {
-    const summary = req.summary || "No summary available.";
-    window.voxmateOverlay.showInfo(summary, "Page Summary");
-  }
+  // if (req.action === "show_summary") {
+  //   const summary = req.summary || "No summary available.";
+  //   window.voxmateOverlay.showInfo(summary, "Page Summary");
+  // }
 });
 
 // =======================================
 // TranslatePage
 // =======================================
 async function translatePage() {
-  console.log("⚙️ Starting page translation...");
-  const bodyText = document.body.innerText.slice(0, 20000);
-  chrome.runtime.sendMessage(
-    { action: "translate_auto", text: bodyText },
-    (response) => {
-      if (!response?.success)
-        return alert(`Translation failed: ${response?.error}`);
-      const translatedText = response.result;
-      const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT
-      );
-      const translatedWords = translatedText.split(/\s+/);
-      let index = 0;
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const words = node.nodeValue.trim().split(/\s+/);
-        if (words.length > 2) {
-          node.nodeValue = translatedWords
-            .slice(index, index + words.length)
-            .join(" ");
-          index += words.length;
+  const loadingId = 'translate_' + Date.now();
+
+  try {
+    console.log("⚙️ Starting page translation...");
+    window.voxmateOverlay.showLoading(
+      "Translating page content...",
+      "Translation in Progress",
+      loadingId
+    );
+
+    const bodyText = document.body.innerText.slice(0, 20000);
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: "translate_auto", text: bodyText },
+        (response) => {
+          if (!response?.success) {
+            console.error("❌ Translation failed:", response?.error);
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showError(
+              `Translation failed: ${response?.error || 'Unknown error'}`,
+              "Translation Error"
+            );
+            resolve(false);
+            return;
+          }
+
+          try {
+            const translatedText = response.result;
+            const walker = document.createTreeWalker(
+              document.body,
+              NodeFilter.SHOW_TEXT
+            );
+            const translatedWords = translatedText.split(/\s+/);
+            let index = 0;
+
+            while (walker.nextNode()) {
+              const node = walker.currentNode;
+              const words = node.nodeValue.trim().split(/\s+/);
+              if (words.length > 2) {
+                node.nodeValue = translatedWords
+                  .slice(index, index + words.length)
+                  .join(" ");
+                index += words.length;
+              }
+            }
+
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showSuccess(
+              "Page translation completed successfully!",
+              "Translation Complete"
+            );
+            resolve(true);
+          } catch (error) {
+            console.error("❌ Error applying translation:", error);
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showError(
+              "Error applying translation to page",
+              "Application Error"
+            );
+            resolve(false);
+          }
         }
-      }
-    }
-  );
-}
-
-function showCommandsOverlay(text) {
-  const commandsHtml = `
-    <div style="margin-bottom: 12px;"><strong>${text.title}</strong></div>
-    <div style="display: flex; flex-direction: column; gap: 8px;">
-      ${text.commands.map(cmd => `
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(43, 47, 138, 0.1); border-radius: 8px;">
-          <span style="color: var(--voxmate-accent); font-weight: 600;">•</span>
-          <span>${cmd}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  window.voxmateOverlay.show(commandsHtml, {
-    title: "Voice Commands",
-    duration: 20000 // 20 seconds for commands
-  });
+      );
+    });
+  } catch (error) {
+    console.error("❌ Error in translatePage:", error);
+    window.voxmateOverlay.removeLoading(loadingId);
+    window.voxmateOverlay.showError(
+      "Failed to start translation process",
+      "Process Error"
+    );
+    return false;
+  }
 }
 
 
@@ -534,23 +541,15 @@ function initVoiceRecognition() {
             stopReading();
             break;
           case "translate":
-            window.voxmateOverlay.showLoading("Translating page content... This may take a moment.",
-              "Translation in Progress"
-            );
             translatePage();
             break;
           case "show commands":
-            const text = getCommandsText(lang);
-            showCommandsOverlay(text);
-            speakCommands(text); // uses storage inside
+            const text = getCommandsText(userLanguage);
+            window.voxmateOverlay.showCommands(text);
+            speakCommands(text);
             break;
           case "summarise":
             console.log("📝 Trigger summarise function");
-            window.voxmateOverlay.showLoading(
-              "Reading page content and generating concise summary...",
-              "Generating Summary"
-            );
-
             handleSummarisePage().then((summary) => {
               if (summary) {
                 console.log("🧠 Summary ready:", summary);
@@ -560,10 +559,6 @@ function initVoiceRecognition() {
             break;
           case "ask":
             console.log("💬 User asked:", question || raw);
-            window.voxmateOverlay.showLoading(
-              "Analyzing page content and finding the best answer...",
-              "Finding Answer"
-            );
             // handleAskCommand returns the answer; ensure speaking from voice context
             handleAskCommand(question || raw).then((answer) => {
               if (answer && voiceActive) {
@@ -758,43 +753,66 @@ window.geminiAPI = {
 
 
 async function handleAskCommand(question) {
-  window.voxmateOverlay.showInfo("Finding the best answer from page content...", "Searching for Answer");
-  console.log("💬 Asking Gemini:", question);
+  const loadingId = 'ask_' + Date.now();
 
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(
-      { action: "ask_with_gemini", question },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("❌ Ask message error:", chrome.runtime.lastError.message);
-          window.voxmateOverlay.showError("Gemini is currently unavailable. Please try again later.", "Service Unavailable");
-          resolve();
-          return;
-        }
-
-        if (!response?.success) {
-          console.warn("⚠️ Ask failed:", response?.reason || response?.error);
-          window.voxmateOverlay.showWarning("I couldn't find a clear answer to your question in the page content.", "Answer Not Found");
-          resolve();
-          return;
-        }
-
-        const answer = response.answer?.trim() || "No response.";
-        console.log("🧠 Gemini Answer:", answer);
-        // Show formatted answer
-        window.voxmateOverlay.showInfo(answer, "Answer");
-
-
-        if (answer && voiceActive) {
-          console.log("🔊 Speaking the answer...");
-          speakAnswer(answer);
-        }
-
-
-        resolve(answer);
-      }
+  try {
+    console.log("💬 Asking Gemini:", question);
+    window.voxmateOverlay.showLoading(
+      "Analyzing page content and finding the best answer...",
+      "Finding Answer",
+      loadingId
     );
-  });
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: "ask_with_gemini", question },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("❌ Ask message error:", chrome.runtime.lastError.message);
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showError(
+              "Gemini service is currently unavailable. Please try again later.",
+              "Service Unavailable"
+            );
+            resolve(null);
+            return;
+          }
+
+          if (!response?.success) {
+            console.warn("⚠️ Ask failed:", response?.reason || response?.error);
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showWarning(
+              "I couldn't find a clear answer to your question in the page content.",
+              "Answer Not Found"
+            );
+            resolve(null);
+            return;
+          }
+
+          const answer = response.answer?.trim() || "No clear answer found in the page content.";
+          console.log("🧠 Gemini Answer:", answer);
+
+          window.voxmateOverlay.removeLoading(loadingId);
+          window.voxmateOverlay.showInfo(answer, "Answer");
+
+          if (answer && voiceActive) {
+            console.log("🔊 Speaking the answer...");
+            speakAnswer(answer);
+          }
+
+          resolve(answer);
+        }
+      );
+    });
+  } catch (error) {
+    console.error("❌ Error in handleAskCommand:", error);
+    window.voxmateOverlay.removeLoading(loadingId);
+    window.voxmateOverlay.showError(
+      "An unexpected error occurred while processing your question.",
+      "Processing Error"
+    );
+    return null;
+  }
 }
 
 
@@ -834,17 +852,26 @@ async function speakAnswer(text) {
 // Helper: Handle Page Summarisation
 // =======================================
 async function handleSummarisePage() {
-  console.log("🧠 Starting summarisation...");
-  window.voxmateOverlay.showInfo("Generating a concise summary of this page...", "Summarising Page");
+  const loadingId = 'summary_' + Date.now();
 
   try {
+    console.log("🧠 Starting summarisation...");
+    window.voxmateOverlay.showLoading(
+      "Reading page content and generating concise summary...",
+      "Generating Summary",
+      loadingId
+    );
+
     const { userLanguage } = await chrome.storage.sync.get("userLanguage");
     const lang = userLanguage || "en";
 
     const text = document.body?.innerText || "";
     if (!text.trim()) {
-      console.warn("⚠️ No readable text on page.");
-      window.voxmateOverlay.showWarning("No readable text found on this page to summarize.", "No Content");
+      window.voxmateOverlay.removeLoading(loadingId);
+      window.voxmateOverlay.showWarning(
+        "No readable text found on this page to summarize.",
+        "No Content"
+      );
       return null;
     }
 
@@ -854,20 +881,30 @@ async function handleSummarisePage() {
         (response) => {
           if (chrome.runtime.lastError) {
             console.error("❌ Summariser error:", chrome.runtime.lastError.message);
-            window.voxmateOverlay.showError("Summarization service is currently unavailable.", "Service Error");
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showError(
+              "Summarization service is currently unavailable.",
+              "Service Error"
+            );
             resolve(null);
             return;
           }
 
           if (!response?.success) {
             console.warn("⚠️ Summarisation failed:", response?.reason || response?.error);
-            window.voxmateOverlay.showError("Could not generate summary at this time.", "Summary Failed");
+            window.voxmateOverlay.removeLoading(loadingId);
+            window.voxmateOverlay.showError(
+              "Could not generate summary at this time.",
+              "Summary Failed"
+            );
             resolve(null);
             return;
           }
 
-          const summary = response.summary?.trim() || "No summary generated.";
+          const summary = response.summary?.trim() || "No summary could be generated from this page.";
           console.log("📝 Summary received:", summary);
+
+          window.voxmateOverlay.removeLoading(loadingId);
           window.voxmateOverlay.showInfo(summary, "Page Summary");
           resolve(summary);
         }
@@ -875,7 +912,12 @@ async function handleSummarisePage() {
     });
   } catch (err) {
     console.error("❌ Error in handleSummarisePage:", err);
-    window.voxmateOverlay.showError("An unexpected error occurred while summarizing.", "Error");
+    window.voxmateOverlay.removeLoading(loadingId);
+    window.voxmateOverlay.showError(
+      "An unexpected error occurred while summarizing.",
+      "Error"
+    );
     return null;
   }
 }
+
