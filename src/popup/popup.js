@@ -1,6 +1,7 @@
 // Modern VoxMate Popup with Calm Intelligence Design
 class VoxMatePopup {
-  constructor() {
+  constructor(root) {
+    this.root = root;
     this.config = {
       supportedLanguages: {
         en: 'English',
@@ -25,20 +26,22 @@ class VoxMatePopup {
 
   cacheElements() {
     this.elements = {
-      closeBtn: document.getElementById('closeBtn'),
-      statusToast: document.getElementById('statusToast'),
-      userLanguage: document.getElementById('userLanguage'),
-      translateBtn: document.getElementById('translateBtn'),
-      readBtn: document.getElementById('readBtn'),
-      pauseBtn: document.getElementById('pauseBtn'),
-      stopBtn: document.getElementById('stopBtn'),
-      micBtn: document.getElementById('micBtn'),
-      commandsBtn: document.getElementById('commandsBtn'),
-      askInput: document.getElementById('askInput'),
-      askSendBtn: document.getElementById('askSendBtn'),
-      summaryBtn: document.getElementById('summaryBtn')
+      closeBtn: this.root.querySelector('#closeBtn'),
+      statusToast: this.root.querySelector('#statusToast'),
+      userLanguage: this.root.querySelector('#userLanguage'),
+      translateBtn: this.root.querySelector('#translateBtn'),
+      readBtn: this.root.querySelector('#readBtn'),
+      pauseBtn: this.root.querySelector('#pauseBtn'),
+      stopBtn: this.root.querySelector('#stopBtn'),
+      micBtn: this.root.querySelector('#micBtn'),
+      commandsBtn: this.root.querySelector('#commandsBtn'),
+      askInput: this.root.querySelector('#askInput'),
+      askSendBtn: this.root.querySelector('#askSendBtn'),
+      summaryBtn: this.root.querySelector('#summaryBtn')
     };
   }
+
+
 
   attachEventListeners() {
     // Close button with smooth interaction
@@ -70,7 +73,7 @@ class VoxMatePopup {
     });
 
     // Keyboard shortcuts for power users
-    document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+    this.root.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
 
     // Micro-interactions for buttons
     this.setupButtonInteractions();
@@ -88,36 +91,27 @@ class VoxMatePopup {
       this.elements.askInput.style.height = Math.min(this.elements.askInput.scrollHeight, 120) + 'px';
     });
   }
-
   setupButtonInteractions() {
-    // Add micro-interactions to all buttons
-    const buttons = document.querySelectorAll('button');
+    const buttons = this.root.querySelectorAll('button');
     buttons.forEach(btn => {
-      btn.addEventListener('mousedown', (e) => {
-        e.currentTarget.style.transform = 'scale(0.98)';
-      });
-
-      btn.addEventListener('mouseup', (e) => {
-        e.currentTarget.style.transform = '';
-      });
-
-      btn.addEventListener('mouseleave', (e) => {
-        e.currentTarget.style.transform = '';
-      });
+      btn.addEventListener('mousedown', e => e.currentTarget.style.transform = 'scale(0.98)');
+      btn.addEventListener('mouseup', e => e.currentTarget.style.transform = '');
+      btn.addEventListener('mouseleave', e => e.currentTarget.style.transform = '');
     });
   }
+
 
   applyAccessibilityFeatures() {
     // Add dyslexic font option if needed
     const prefersDyslexic = localStorage.getItem('dyslexic-font');
     if (prefersDyslexic === 'true') {
-      document.body.classList.add('voice-friendly');
+      this.root.body.classList.add('voice-friendly');
     }
 
     // Add calm mode for light sensitivity
     const prefersCalm = localStorage.getItem('calm-mode');
     if (prefersCalm === 'true') {
-      document.body.classList.add('calm-mode');
+      this.root.body.classList.add('calm-mode');
     }
   }
 
@@ -151,14 +145,14 @@ class VoxMatePopup {
 
   handleTabNavigation(e) {
     // Ensure focus stays within popup for keyboard users
-    const focusableElements = document.querySelectorAll('button, select, textarea');
+    const focusableElements = this.root.querySelectorAll('button, select, textarea');
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
-    if (e.shiftKey && document.activeElement === firstElement) {
+    if (e.shiftKey && this.root.activeElement === firstElement) {
       lastElement.focus();
       e.preventDefault();
-    } else if (!e.shiftKey && document.activeElement === lastElement) {
+    } else if (!e.shiftKey && this.root.activeElement === lastElement) {
       firstElement.focus();
       e.preventDefault();
     }
@@ -166,11 +160,15 @@ class VoxMatePopup {
 
   async animateClose() {
     return new Promise(resolve => {
-      document.querySelector('.popup-container').style.transform = 'scale(0.95)';
-      document.querySelector('.popup-container').style.opacity = '0';
+      const container = this.root.querySelector('#popup-container');
+      if (container) {
+        container.style.transform = 'scale(0.95)';
+        container.style.opacity = '0';
+      }
       setTimeout(resolve, 150);
     });
   }
+
 
   async saveLanguage() {
     const lang = this.elements.userLanguage.value;
@@ -210,6 +208,7 @@ class VoxMatePopup {
 
       }
     } catch (error) {
+      this.showToast('Error performing action');
     }
   }
 
@@ -254,6 +253,7 @@ class VoxMatePopup {
       }
     } catch (error) {
       this.setLoading(this.elements.askSendBtn, false);
+      this.showToast('Error sending question');
     }
   }
 
@@ -300,7 +300,8 @@ class VoxMatePopup {
   }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  new VoxMatePopup();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("popupRoot");
+  new VoxMatePopup(root);
 });

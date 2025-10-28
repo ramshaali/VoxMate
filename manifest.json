@@ -4,26 +4,52 @@
   "short_name": "VxM",
   "version": "1.0",
   "description": "Your voice-powered web companion. Read, summarize, and ask questions about any webpage - hands-free.",
-  "permissions": ["activeTab", "storage", "tabs", "commands", "scripting"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "commands",
+    "scripting"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "src/popup/popup.html",
     "default_title": "VoxMate - Your voice web companion"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-       "js": [
-        "src/content/overlay.js", 
-        "src/content/content.js"         
+      "matches": [
+        "<all_urls>"
       ],
-      "run_at": "document_idle"
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "css": [
+        "src/popup/popup.css"
+      ]
     }
   ],
   "host_permissions": [
     "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/popup/popup.html",
+        "src/popup/popup.css",
+        "src/popup/popup.js",
+        "public/icons/logo-48.png",
+        "public/icons/logo-64.png",
+        "public/icons/logo-72.png",
+        "public/icons/logo-96.png",
+        "public/icons/logo-256.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
   "icons": {
     "48": "public/icons/logo-48.png",
@@ -39,5 +65,8 @@
       },
       "description": "Toggle voice mode on/off"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }
