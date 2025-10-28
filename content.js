@@ -252,15 +252,139 @@ function showCommandsOverlay(text) {
 }
 
 
-// helper to speak commands
-function speakCommands(text) {
-  const utter = new SpeechSynthesisUtterance(
-    `${text.title}. ${text.commands.join(". ")}`
-  );
-  utter.lang = chrome.storage.sync.get("userLanguage") || "en";
-  window.speechSynthesis.speak(utter);
+// -------------------------------
+// Local command mapper (returns same object shape as Gemini mapping)
+// -------------------------------
+function mapLocalCommand(rawText, userLang = "en") {
+  const raw = String(rawText || "").trim();
+  const rawLC = raw.toLowerCase();
+
+  // Phrase maps per language (you can expand)
+  const maps = {
+    en: {
+      read: ["read", "start reading", "read page", "read this"],
+      pause: ["pause", "hold on", "wait"],
+      stop: ["stop", "cancel", "end reading", "stop reading"],
+      translate: ["translate", "translate page", "translate this"],
+      "show commands": ["show commands", "commands", "help", "what can you say", "what can i say"],
+      summarise: ["summarise", "summarize", "summary", "summarize this", "summarise this"],
+    },
+    hi: {
+      read: ["पढ़ो", "पढ़ो"],
+      pause: ["रुको", "ठहरो"],
+      stop: ["बंद करो", "रोक दो"],
+      translate: ["अनुवाद", "अनुवाद करो", "अनुवाद करो पेज"],
+      "show commands": ["कमांड दिखाओ", "कमांड", "सहायता", "help"],
+      summarise: ["सारांश", "सारांश बनाओ"],
+    },
+    zh: {
+      read: ["读", "朗读"],
+      pause: ["暂停"],
+      stop: ["停止"],
+      translate: ["翻译"],
+      "show commands": ["显示命令", "命令", "帮助"],
+      summarise: ["总结"],
+    },
+    es: {
+      read: ["leer"],
+      pause: ["pausa"],
+      stop: ["detener"],
+      translate: ["traducir"],
+      "show commands": ["comandos", "mostrar comandos", "ayuda"],
+      summarise: ["resumir"],
+    },
+    fr: {
+      read: ["lire"],
+      pause: ["pause"],
+      stop: ["arrêter", "stop"],
+      translate: ["traduire"],
+      "show commands": ["commandes", "afficher les commandes", "aide"],
+      summarise: ["résumer"],
+    }
+  };
+
+  // Use userLang map AND english map (english always included)
+  const primaryMap = maps[userLang] || {};
+  const englishMap = maps["en"];
+
+  // helper to test if any phrase matches (word boundary-ish)
+  const phraseMatches = (phrase) => {
+    const p = phrase.toLowerCase();
+    // match whole words or common multiword phrases
+    return rawLC.includes(` ${p}`) || rawLC.startsWith(p) || rawLC.endsWith(p) || rawLC === p || rawLC.includes(p + " ");
+  };
+
+  // check primaryLang first
+  for (const [cmd, phrases] of Object.entries(primaryMap)) {
+    if (phrases.some(phraseMatches)) {
+      // If command is 'ask' like question? handled below
+      if (cmd === "show commands") {
+        return [{ command: "show commands", raw }];
+      }
+      if (cmd === "summarise") {
+        return [{ command: "summarise", raw }];
+      }
+      return [{ command: cmd, raw }];
+    }
+  }
+
+  // always also check English map
+  for (const [cmd, phrases] of Object.entries(englishMap)) {
+    if (phrases.some(phraseMatches)) {
+      if (cmd === "show commands") {
+        return [{ command: "show commands", raw }];
+      }
+      if (cmd === "summarise") {
+        return [{ command: "summarise", raw }];
+      }
+      return [{ command: cmd, raw }];
+    }
+  }
+
+  // If the utterance *looks* like a question -> treat as ask
+  if (/^(what|who|how|when|why|where|which|is|are)\b/i.test(rawLC) || rawLC.endsWith("?")) {
+    return [{ command: "ask", question: raw, raw }];
+  }
+
+  // Some natural "ask" phrases in other languages
+  if (/(ask|tell me|explain|define|बताओ|बताइए|请问|请告诉我|पुछो)/i.test(raw)) {
+    // extract probable question part (naive)
+    const q = raw.replace(/^(ask|tell me|explain|define)\s*/i, "").trim();
+    return [{ command: "ask", question: q || raw, raw }];
+  }
+
+  // No confident local mapping
+  return [{ command: "unknown", raw }];
 }
 
+// -------------------------------
+// Robust speakCommands (async) - fixes chrome.storage usage and string checks
+// -------------------------------
+async function speakCommands(text) {
+  try {
+    window.speechSynthesis.cancel();
+
+    const title = text?.title ? String(text.title) : "Commands";
+    const commandsList = Array.isArray(text?.commands) ? text.commands.join(". ") : String(text?.commands || "");
+
+    const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+    const lang = userLanguage || "en";
+
+    const utter = new SpeechSynthesisUtterance(`${title}. ${commandsList}`);
+    utter.lang = (lang === "en" ? "en-US" : (lang === "zh" ? "zh-CN" : lang));
+    utter.onend = () => console.log("✅ Finished speaking commands");
+    utter.onerror = (err) => {
+      console.error("🔊 speakCommands error:", err);
+      if (err && err.error === "not-allowed") {
+        console.warn("🔇 Speech blocked. Ensure the page had a user gesture to enable audio.");
+      }
+    };
+
+    window.speechSynthesis.speak(utter);
+  } catch (e) {
+    console.error("❌ speakCommands failed:", e);
+  }
+}
 
 function getCommandsText(lang) {
   const translations = {
@@ -327,75 +451,103 @@ function initVoiceRecognition() {
   }
 
   recognition = new webkitSpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.continuous = true;
-  recognition.interimResults = false;
 
-  recognition.onresult = async (event) => {
-    const rawCommand =
-      event.results[event.results.length - 1][0].transcript.trim();
-    console.log("🎙️ Voice command:", rawCommand);
+  // set language based on user preference where possible (fallback to en-US)
+  chrome.storage.sync.get("userLanguage", ({ userLanguage }) => {
+    const lang = userLanguage || "en";
+    // Map small codes to speech recognition locales
+    const recognitionLangMap = {
+      en: "en-US",
+      hi: "hi-IN",
+      zh: "zh-CN",
+      es: "es-ES",
+      fr: "fr-FR",
+    };
+    recognition.lang = recognitionLangMap[lang] || "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
 
-    const { userLanguage } = await chrome.storage.sync.get("userLanguage");
-    let commandObjects = [{ command: "unknown", raw: rawCommand }];
+    recognition.onresult = async (event) => {
+      const rawCommand = event.results[event.results.length - 1][0].transcript.trim();
+      console.log("🎙️ Voice command:", rawCommand);
 
-    // Ask background to translate/mapping via Gemini Nano
-    try {
-      commandObjects = await translateCommandText(rawCommand, userLanguage);
-    } catch (e) {
-      console.warn("⚠️ Could not map command:", e.message || e);
-      commands = [rawCommand];
-    }
+      const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+      const lang = userLanguage || "en";
 
+      // 1) Try local/direct mapping (primary language + english)
+      let commandObjects = mapLocalCommand(rawCommand, lang);
+      console.log("🔎 Local mapping result:", commandObjects);
 
-    commandObjects.forEach(({ command, question, raw }) => {
-      console.log(`⚙️ Executing command: ${command}`, question ? `(Question: ${question})` : "");
-
-      switch (command) {
-        case "read":
-          startReading();
-          break;
-        case "pause":
-          pauseReading();
-          break;
-        case "stop":
-          stopReading();
-          break;
-        case "translate":
-          translatePage();
-          break;
-        case "show commands":
-          const text = getCommandsText(userLanguage);
-          showCommandsOverlay(text);
-          speakCommands(text);
-          break;
-        case "summarise":
-          console.log("📝 Trigger summarise function");
-          break;
-        case "ask":
-          console.log("💬 User asked:", question || raw);
-          handleAskCommand(question || raw).then((answer) => {
-            if (answer) {
-              console.log("🔊 Speaking from voice recognition context...");
-              speakAnswer(answer);
-            }
-          });
-          break;
-
-        default:
-          console.log("🤷 Unknown command, ignoring:", raw);
-          break;
+      // 2) If local mapping returns unknown -> fallback to Gemini mapping
+      if (!commandObjects || (commandObjects.length === 1 && commandObjects[0].command === "unknown")) {
+        try {
+          console.log("➡️ Fallback to Gemini mapping...");
+          const geminiResult = await translateCommandText(rawCommand, lang);
+          // translateCommandText in your code returns an array or single object. Normalize:
+          if (Array.isArray(geminiResult) && geminiResult.length) {
+            commandObjects = geminiResult;
+          } else if (geminiResult && geminiResult.command) {
+            commandObjects = [geminiResult];
+          } else {
+            commandObjects = [{ command: "unknown", raw: rawCommand }];
+          }
+        } catch (err) {
+          console.warn("⚠️ Gemini mapping failed, continuing with unknown:", err);
+          commandObjects = [{ command: "unknown", raw: rawCommand }];
+        }
       }
-    });
-  };
-  recognition.onerror = (e) => console.error("🎙️ Recognition error:", e.error);
-  recognition.onend = () => {
-    if (voiceActive) recognition.start(); // keep alive
-  };
 
-  recognition.start();
-  voiceActive = true;
-  console.log("🎧 Voice recognition started");
+      // 3) Execute pipeline for each mapped object
+      commandObjects.forEach(({ command, question, raw }) => {
+        console.log(`⚙️ Executing command: ${command}`, question ? `(Question: ${question})` : "");
+
+        switch (command) {
+          case "read":
+            startReading();
+            break;
+          case "pause":
+            pauseReading();
+            break;
+          case "stop":
+            stopReading();
+            break;
+          case "translate":
+            translatePage();
+            break;
+          case "show commands":
+            const text = getCommandsText(lang);
+            showCommandsOverlay(text);
+            speakCommands(text); // uses storage inside
+            break;
+          case "summarise":
+            console.log("📝 Trigger summarise function");
+            break;
+          case "ask":
+            console.log("💬 User asked:", question || raw);
+            // handleAskCommand returns the answer; ensure speaking from voice context
+            handleAskCommand(question || raw).then((answer) => {
+              if (answer && voiceActive) {
+                console.log("🔊 Speaking from voice recognition context...");
+                speakAnswer(answer);
+              }
+            });
+            break;
+          default:
+            console.log("🤷 Unknown command, ignoring:", raw);
+            break;
+        }
+      });
+    };
+
+    recognition.onerror = (e) => console.error("🎙️ Recognition error:", e.error);
+    recognition.onend = () => {
+      if (voiceActive) recognition.start(); // keep alive
+    };
+
+    recognition.start();
+    voiceActive = true;
+    console.log("🎧 Voice recognition started (lang:", recognition.lang, ")");
+  });
 }
 
 function stopVoiceRecognition() {
