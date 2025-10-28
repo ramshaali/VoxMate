@@ -209,7 +209,7 @@ async function translatePage() {
     console.log("⚙️ Starting page translation...");
     window.voxmateOverlay.showLoading(
       "Translating page content...",
-      "Translation in Progress",
+      "Translation",
       loadingId
     );
 
@@ -219,9 +219,11 @@ async function translatePage() {
       chrome.runtime.sendMessage(
         { action: "translate_auto", text: bodyText },
         (response) => {
+          
+          window.voxmateOverlay.removeLoading(loadingId);
+
           if (!response?.success) {
             console.error("❌ Translation failed:", response?.error);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showError(
               `Translation failed: ${response?.error || 'Unknown error'}`,
               "Translation Error"
@@ -250,7 +252,6 @@ async function translatePage() {
               }
             }
 
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showSuccess(
               "Page translation completed successfully!",
               "Translation Complete"
@@ -258,7 +259,6 @@ async function translatePage() {
             resolve(true);
           } catch (error) {
             console.error("❌ Error applying translation:", error);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showError(
               "Error applying translation to page",
               "Application Error"
@@ -754,12 +754,12 @@ window.geminiAPI = {
 
 async function handleAskCommand(question) {
   const loadingId = 'ask_' + Date.now();
-
+  
   try {
     console.log("💬 Asking Gemini:", question);
     window.voxmateOverlay.showLoading(
       "Analyzing page content and finding the best answer...",
-      "Finding Answer",
+      "Asking Gemini",
       loadingId
     );
 
@@ -767,9 +767,11 @@ async function handleAskCommand(question) {
       chrome.runtime.sendMessage(
         { action: "ask_with_gemini", question },
         (response) => {
+          // Remove loading overlay first - this now uses immediate removal
+          window.voxmateOverlay.removeLoading(loadingId);
+
           if (chrome.runtime.lastError) {
             console.error("❌ Ask message error:", chrome.runtime.lastError.message);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showError(
               "Gemini service is currently unavailable. Please try again later.",
               "Service Unavailable"
@@ -780,7 +782,6 @@ async function handleAskCommand(question) {
 
           if (!response?.success) {
             console.warn("⚠️ Ask failed:", response?.reason || response?.error);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showWarning(
               "I couldn't find a clear answer to your question in the page content.",
               "Answer Not Found"
@@ -791,8 +792,7 @@ async function handleAskCommand(question) {
 
           const answer = response.answer?.trim() || "No clear answer found in the page content.";
           console.log("🧠 Gemini Answer:", answer);
-
-          window.voxmateOverlay.removeLoading(loadingId);
+          
           window.voxmateOverlay.showInfo(answer, "Answer");
 
           if (answer && voiceActive) {
@@ -814,8 +814,6 @@ async function handleAskCommand(question) {
     return null;
   }
 }
-
-
 
 // -------------------------------
 // Speak answer helper
@@ -879,9 +877,12 @@ async function handleSummarisePage() {
       chrome.runtime.sendMessage(
         { action: "run_summarizer", text, lang },
         (response) => {
+          
+          // Remove loading overlay first - this now uses immediate removal
+          window.voxmateOverlay.removeLoading(loadingId);
+
           if (chrome.runtime.lastError) {
             console.error("❌ Summariser error:", chrome.runtime.lastError.message);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showError(
               "Summarization service is currently unavailable.",
               "Service Error"
@@ -892,7 +893,6 @@ async function handleSummarisePage() {
 
           if (!response?.success) {
             console.warn("⚠️ Summarisation failed:", response?.reason || response?.error);
-            window.voxmateOverlay.removeLoading(loadingId);
             window.voxmateOverlay.showError(
               "Could not generate summary at this time.",
               "Summary Failed"
@@ -904,7 +904,6 @@ async function handleSummarisePage() {
           const summary = response.summary?.trim() || "No summary could be generated from this page.";
           console.log("📝 Summary received:", summary);
 
-          window.voxmateOverlay.removeLoading(loadingId);
           window.voxmateOverlay.showInfo(summary, "Page Summary");
           resolve(summary);
         }
