@@ -894,3 +894,55 @@ async function handleSummarisePage() {
   }
 }
 
+
+let popupFrame = null;
+
+chrome.runtime.onMessage.addListener(async (msg) => {
+  if (msg.action === "togglePopup") {
+    // Close if open
+    if (popupFrame) {
+      popupFrame.remove();
+      popupFrame = null;
+      return;
+    }
+
+    // Create iframe for popup.html (runs in extension sandbox)
+    popupFrame = document.createElement("iframe");
+    popupFrame.id = "voxmate-iframe";
+    popupFrame.src = chrome.runtime.getURL("src/popup/popup.html");
+
+    Object.assign(popupFrame.style, {
+      position: "fixed",
+      top: "60px",
+      right: "40px",
+      zIndex: "2147483647",
+      width: "420px",
+      height: "600px",
+      border: "none",
+      borderRadius: "16px",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+      overflow: "auto",
+      background: "#ffffff", 
+    });
+
+
+    document.body.appendChild(popupFrame);
+
+    // Listen for messages from iframe
+    window.addEventListener("message", (e) => {
+      const data = e.data || {};
+      if (data.type === "voxmate-close") {
+        popupFrame?.remove();
+        popupFrame = null;
+      }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener("beforeunload", () => {
+      popupFrame?.remove();
+      popupFrame = null;
+    });
+  }
+});
+
+
