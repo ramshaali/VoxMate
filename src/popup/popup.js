@@ -8,17 +8,19 @@ class VoxMatePopup {
         fr: "French",
         es: "Spanish",
         zh: "Chinese",
+        hi: "Hindi",
       },
     };
 
     this.elements = {};
+    this.currentMessages = {};
     this.init();
   }
 
   async init() {
     this.cacheElements();
-    this.attachEventListeners();
     await this.loadSavedSettings();
+    this.attachEventListeners();
     this.setupAutoSave();
     this.setupTextareaAutoResize();
     this.applyAccessibilityFeatures();
@@ -38,19 +40,163 @@ class VoxMatePopup {
       askInput: this.root.querySelector("#askInput"),
       askSendBtn: this.root.querySelector("#askSendBtn"),
       summaryBtn: this.root.querySelector("#summaryBtn"),
+      // UI text elements that need translation
+      title: this.root.querySelector(".title"),
+      subtitle: this.root.querySelector(".subtitle"),
+      cardTitles: this.root.querySelectorAll(".card-title"),
     };
   }
+  
+
+  
+  // ========== LANGUAGE SWITCHING METHODS ==========
+
+  /**
+   * Load messages.json for a specific locale
+   */
+  async loadMessages(locale) {
+  try {
+    const url = chrome.runtime.getURL(`_locales/${locale}/messages.json`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to load locale: ${locale}`);
+    const messages = await response.json();
+    this.currentMessages = messages;
+    return messages;
+  } catch (error) {
+    console.error('Error loading messages:', error);
+    if (locale !== 'en') return this.loadMessages('en');
+    return null;
+  }
+}
+
+
+  /**
+   * Get translated message by key
+   */
+  getMessage(key, defaultValue = '') {
+    return this.currentMessages[key]?.message || defaultValue || key;
+  }
+
+  /**
+   * Update all UI text elements with current language
+   */
+  updateUIText() {
+    // Update header
+    if (this.elements.title) {
+      this.elements.title.textContent = this.getMessage('extensionTitle', 'VoxMate');
+    }
+    if (this.elements.subtitle) {
+      this.elements.subtitle.textContent = this.getMessage('extensionSubtitle', 'Let the web speak to everyone.');
+    }
+    
+    // Update close button aria-label
+    this.elements.closeBtn.setAttribute('aria-label', this.getMessage('closeButton', 'Close extension'));
+    
+    // Update card titles
+    if (this.elements.cardTitles[0]) {
+      this.elements.cardTitles[0].textContent = this.getMessage('languageTranslation', 'Language & Translation');
+    }
+    if (this.elements.cardTitles[1]) {
+      this.elements.cardTitles[1].textContent = this.getMessage('readingControls', 'Reading Controls');
+    }
+    if (this.elements.cardTitles[2]) {
+      this.elements.cardTitles[2].textContent = this.getMessage('voiceControls', 'Voice Controls');
+    }
+    if (this.elements.cardTitles[3]) {
+      this.elements.cardTitles[3].textContent = this.getMessage('askQuestions', 'Ask Questions');
+    }
+    
+    // Update button text
+    const translateBtnSpan = this.elements.translateBtn.querySelector('span');
+    if (translateBtnSpan) {
+      translateBtnSpan.textContent = this.getMessage('translateButton', 'Translate Page');
+    }
+    
+    const readBtnSpan = this.elements.readBtn.querySelector('span');
+    if (readBtnSpan) {
+      readBtnSpan.textContent = this.getMessage('readButton', 'Read');
+    }
+    
+    const pauseBtnSpan = this.elements.pauseBtn.querySelector('span');
+    if (pauseBtnSpan) {
+      pauseBtnSpan.textContent = this.getMessage('pauseButton', 'Pause');
+    }
+    
+    const stopBtnSpan = this.elements.stopBtn.querySelector('span');
+    if (stopBtnSpan) {
+      stopBtnSpan.textContent = this.getMessage('stopButton', 'Stop');
+    }
+    
+    const micBtnSpan = this.elements.micBtn.querySelector('span');
+    if (micBtnSpan) {
+      micBtnSpan.textContent = this.getMessage('startVoiceMode', 'Start Voice Mode');
+    }
+    
+    const commandsBtnSpan = this.elements.commandsBtn.querySelector('span');
+    if (commandsBtnSpan) {
+      commandsBtnSpan.textContent = this.getMessage('voiceCommands', 'Voice Commands');
+    }
+    
+    const summaryBtnSpan = this.elements.summaryBtn.querySelector('span');
+    if (summaryBtnSpan) {
+      summaryBtnSpan.textContent = this.getMessage('getSummary', 'Get Summary');
+    }
+    
+    // Update placeholder
+    this.elements.askInput.placeholder = this.getMessage('askPlaceholder', 'Ask anything about this page...');
+    
+    // Update voice hint
+    const voiceHint = this.root.querySelector('.voice-hint');
+    if (voiceHint) {
+      const shortcutSpan = voiceHint.querySelector('.shortcut');
+      if (shortcutSpan) {
+        const shortcutText = shortcutSpan.outerHTML;
+        voiceHint.innerHTML = this.getMessage('voiceHint', 'Press ') + ' ' + shortcutText + ' ' + this.getMessage('voiceHintEnd', 'to start and stop voice mode');
+      }
+    }
+  }
+
+  /**
+   * Handle language change
+   */
+  async handleLanguageChange(locale) {
+    // Show loading toast
+    this.showToast('Loading language...');
+    
+    try {
+      // Load messages for selected locale
+      const messages = await this.loadMessages(locale);
+      
+      if (messages) {
+        // Update UI with new messages
+        this.updateUIText();
+        
+        // Save preference
+        await chrome.storage.sync.set({ selectedLanguage: locale, userLanguage: locale });
+        
+        // Show success message
+        this.showToast(this.getMessage('languageUpdated', 'Language updated successfully!'));
+      }
+    } catch (error) {
+      console.error('Error changing language:', error);
+      this.showToast(this.getMessage('errorLoading', 'Error loading language'));
+    }
+  }
+
+  // ========== END LANGUAGE SWITCHING METHODS ==========
 
   attachEventListeners() {
     // Close button with smooth interaction
-    
     this.elements.closeBtn.addEventListener("click", () => {
-       this.elements.root.style.transition = "opacity 0.2s ease";
-      this.elements.root.style.opacity = "0";
       this.animateClose().then(() => {
-        
         window.parent.postMessage({ type: "voxmate-close" }, "*");
       });
+    });
+
+    // Language change listener - THIS IS CRITICAL!
+    this.elements.userLanguage.addEventListener("change", async (e) => {
+      const selectedLanguage = e.target.value;
+      await this.handleLanguageChange(selectedLanguage);
     });
 
     // Primary action buttons
@@ -84,7 +230,6 @@ class VoxMatePopup {
     this.elements.askSendBtn.addEventListener("click", () =>
       this.sendQuestion()
     );
-    //this.elements.summaryBtn.addEventListener('click', () => this.sendQuickQuestion('What is this page about?'));
     this.elements.askInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -102,9 +247,7 @@ class VoxMatePopup {
   }
 
   setupAutoSave() {
-    this.elements.userLanguage.addEventListener("change", () => {
-      this.saveLanguage();
-    });
+    // Language change now handled in attachEventListeners
   }
 
   setupTextareaAutoResize() {
@@ -114,6 +257,7 @@ class VoxMatePopup {
         Math.min(this.elements.askInput.scrollHeight, 120) + "px";
     });
   }
+
   setupButtonInteractions() {
     const buttons = this.root.querySelectorAll("button");
     buttons.forEach((btn) => {
@@ -148,11 +292,26 @@ class VoxMatePopup {
 
   async loadSavedSettings() {
     try {
-      const { userLanguage } = await chrome.storage.sync.get(["userLanguage"]);
-      const lang = userLanguage || navigator.language.split("-")[0] || "en";
+      const { userLanguage, selectedLanguage } = await chrome.storage.sync.get([
+        "userLanguage",
+        "selectedLanguage"
+      ]);
+      
+      // Prefer selectedLanguage, fallback to userLanguage, then browser language, then English
+      const lang = selectedLanguage || userLanguage || navigator.language.split("-")[0] || "en";
+      
+      // Set the select value
       this.elements.userLanguage.value = lang;
+      
+      // Load and apply the language
+      await this.loadMessages(lang);
+      this.updateUIText();
+      
     } catch (error) {
       console.error("Error loading settings:", error);
+      // Load English as fallback
+      await this.loadMessages('en');
+      this.updateUIText();
     }
   }
 
@@ -205,9 +364,9 @@ class VoxMatePopup {
   async saveLanguage() {
     const lang = this.elements.userLanguage.value;
     try {
-      await chrome.storage.sync.set({ userLanguage: lang });
+      await chrome.storage.sync.set({ userLanguage: lang, selectedLanguage: lang });
     } catch (error) {
-      this.showToast("Error saving language");
+      this.showToast(this.getMessage('errorLoading', "Error saving language"));
     }
   }
 
@@ -245,7 +404,7 @@ class VoxMatePopup {
         }
       }
     } catch (error) {
-      this.showToast("Error performing action");
+      this.showToast(this.getMessage('errorAction', "Error performing action"));
     }
   }
 
@@ -273,7 +432,7 @@ class VoxMatePopup {
   async sendQuestion() {
     const question = this.elements.askInput.value.trim();
     if (!question) {
-      this.showToast("Please enter a question");
+      this.showToast(this.getMessage('enterQuestion', "Please enter a question"));
       this.elements.askInput.focus();
       return;
     }
@@ -296,7 +455,7 @@ class VoxMatePopup {
       }
     } catch (error) {
       this.setLoading(this.elements.askSendBtn, false);
-      this.showToast("Error sending question");
+      this.showToast(this.getMessage('errorSending', "Error sending question"));
     }
   }
 
