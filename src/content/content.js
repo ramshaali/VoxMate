@@ -896,12 +896,20 @@ async function handleSummarisePage() {
 
 
 
+// top-level in content.js
 let popupFrame = null;
+let parentClickForwarder = null;
 
 chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.action === "togglePopup") {
     // Close if open
     if (popupFrame) {
+      // remove parent click listener
+      if (parentClickForwarder) {
+        document.removeEventListener("click", parentClickForwarder, true);
+        parentClickForwarder = null;
+      }
+
       popupFrame.remove();
       popupFrame = null;
       return;
@@ -923,36 +931,54 @@ chrome.runtime.onMessage.addListener(async (msg) => {
       borderRadius: "16px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
       overflow: "auto",
-      background: "transparent", 
+      background: "transparent",
     });
-
 
     document.body.appendChild(popupFrame);
 
-    // Listen for messages from iframe
+    // Forward parent clicks to the iframe so the iframe can react
+    parentClickForwarder = (e) => {
+      // if click target is the iframe toggle button (if any), you can early-ignore here.
+      // If you want to ignore clicks on the iframe element itself:
+      if (e.target === popupFrame) return;
+
+      // Send a simple message into the iframe
+      // You could restrict origin to chrome-extension://... but '*' is fine for this case
+      popupFrame.contentWindow?.postMessage({ type: "parent-click" }, "*");
+    };
+
+    // Use capture phase (true) so we get clicks early
+    document.addEventListener("click", parentClickForwarder, true);
+
+    // Listen for close message from iframe
     window.addEventListener("message", (e) => {
       const data = e.data || {};
       if (data.type === "voxmate-close") {
         if (popupFrame) {
-          popupFrame.style.transition = "opacity 0.2s ease";
+          popupFrame.style.transition = "opacity 0.01s ease";
           popupFrame.style.opacity = "0";
           setTimeout(() => {
+            // cleanup
+            document.removeEventListener("click", parentClickForwarder, true);
+            parentClickForwarder = null;
             popupFrame.remove();
             popupFrame = null;
           }, 100);
         }
       }
-
     });
 
     // Cleanup on page unload
     window.addEventListener("beforeunload", () => {
-      popupFrame?.remove();
+      if (popupFrame) popupFrame.remove();
       popupFrame = null;
+      if (parentClickForwarder) {
+        document.removeEventListener("click", parentClickForwarder, true);
+        parentClickForwarder = null;
+      }
     });
   }
 });
-
 
 
 
