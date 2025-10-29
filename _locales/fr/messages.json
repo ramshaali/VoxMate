@@ -1,12 +1,15 @@
 {
   "extensionTitle": {
-    "message": "VoxMate - Votre Compagnon Web Vocal"
+    "message": "VoxMate - Votre compagnon vocal du Web"
   },
   "extensionSubtitle": {
-    "message": "Laissez le web parler à tout le monde."
+    "message": "Laissez le Web parler pour tous."
   },
   "closeButton": {
-    "message": "Fermer l'extension"
+    "message": "Fermer l’extension"
+  },
+  "gestureDisclaimer": {
+    "message": "⚠️ Faites un geste (clic ou appui) sur l’écran pour démarrer l’IA."
   },
   "languageTranslation": {
     "message": "Langue et Traduction"
@@ -15,13 +18,10 @@
     "message": "Sélectionnez votre langue préférée"
   },
   "translateButton": {
-    "message": "Traduire la Page"
+    "message": "Traduire la page"
   },
   "readingControls": {
-    "message": "Contrôles de Lecture"
-  },
-  "startReading": {
-    "message": "Commencer la lecture du contenu de la page"
+    "message": "Commandes de lecture"
   },
   "readButton": {
     "message": "Lire"
@@ -33,34 +33,31 @@
     "message": "Arrêter"
   },
   "voiceControls": {
-    "message": "Contrôles Vocaux"
+    "message": "Commandes vocales"
   },
-  "startVoice": {
-    "message": "Démarrer les commandes vocales"
+  "micBtn": {
+    "message": "Démarrer le mode vocal"
   },
   "voiceCommands": {
-    "message": "Commandes Vocales"
+    "message": "Commandes vocales"
   },
   "voiceHint": {
-    "message": "Appuyez sur $SHORTCUT$ pour démarrer et arrêter le mode vocal",
-    "placeholders": {
-      "SHORTCUT": {
-        "content": "$1",
-        "example": "Ctrl+Shift+V"
-      }
-    }
+    "message": "Appuyez sur"
+  },
+  "voiceHintEnd": {
+    "message": "pour démarrer et arrêter le mode vocal"
   },
   "askQuestions": {
-    "message": "Poser des Questions"
+    "message": "Poser des questions"
   },
   "askPlaceholder": {
-    "message": "Posez n'importe quelle question sur cette page..."
+    "message": "Demandez n’importe quoi sur cette page..."
   },
   "sendQuestion": {
     "message": "Envoyer la question"
   },
   "getSummary": {
-    "message": "Obtenir un Résumé"
+    "message": "Obtenir le résumé"
   },
   "pageSummary": {
     "message": "Obtenir le résumé de la page"

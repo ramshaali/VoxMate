@@ -1,12 +1,15 @@
 {
   "extensionTitle": {
-    "message": "VoxMate - Tu Compañero Web de Voz"
+    "message": "VoxMate - Tu compañero de voz en la web"
   },
   "extensionSubtitle": {
-    "message": "Deja que la web hable con todos."
+    "message": "Deja que la web hable para todos."
   },
   "closeButton": {
     "message": "Cerrar extensión"
+  },
+  "gestureDisclaimer": {
+    "message": "⚠️ Haz un gesto (clic o toque) en la pantalla para iniciar la IA."
   },
   "languageTranslation": {
     "message": "Idioma y Traducción"
@@ -15,13 +18,10 @@
     "message": "Selecciona tu idioma preferido"
   },
   "translateButton": {
-    "message": "Traducir Página"
+    "message": "Traducir página"
   },
   "readingControls": {
-    "message": "Controles de Lectura"
-  },
-  "startReading": {
-    "message": "Comenzar a leer contenido de la página"
+    "message": "Controles de lectura"
   },
   "readButton": {
     "message": "Leer"
@@ -33,25 +33,22 @@
     "message": "Detener"
   },
   "voiceControls": {
-    "message": "Controles de Voz"
+    "message": "Controles de voz"
   },
-  "startVoice": {
-    "message": "Iniciar comandos de voz"
+  "micBtn": {
+    "message": "Iniciar modo de voz"
   },
   "voiceCommands": {
-    "message": "Comandos de Voz"
+    "message": "Comandos de voz"
   },
   "voiceHint": {
-    "message": "Presiona $SHORTCUT$ para iniciar y detener el modo de voz",
-    "placeholders": {
-      "SHORTCUT": {
-        "content": "$1",
-        "example": "Ctrl+Shift+V"
-      }
-    }
+    "message": "Presiona"
+  },
+  "voiceHintEnd": {
+    "message": "para iniciar y detener el modo de voz"
   },
   "askQuestions": {
-    "message": "Hacer Preguntas"
+    "message": "Hacer preguntas"
   },
   "askPlaceholder": {
     "message": "Pregunta cualquier cosa sobre esta página..."
@@ -60,7 +57,7 @@
     "message": "Enviar pregunta"
   },
   "getSummary": {
-    "message": "Obtener Resumen"
+    "message": "Obtener resumen"
   },
   "pageSummary": {
     "message": "Obtener resumen de la página"

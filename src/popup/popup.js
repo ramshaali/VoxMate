@@ -140,7 +140,7 @@ class VoxMatePopup {
     
     const micBtnSpan = this.elements.micBtn.querySelector('span');
     if (micBtnSpan) {
-      micBtnSpan.textContent = this.getMessage('startVoiceMode', 'Start Voice Mode');
+      micBtnSpan.textContent = this.getMessage('micBtn', 'Start Voice Mode');
     }
     
     const commandsBtnSpan = this.elements.commandsBtn.querySelector('span');

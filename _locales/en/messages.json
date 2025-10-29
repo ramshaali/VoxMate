@@ -9,6 +9,9 @@
     "message": "Close extension",
     "description": "Close button aria-label"
   },
+  "gestureDisclaimer": {
+    "message": "⚠️ Do any gesture (click or tap) on screen to start AI."
+  },
   "languageTranslation": {
     "message": "Language & Translation"
   },
@@ -20,9 +23,6 @@
   },
   "readingControls": {
     "message": "Reading Controls"
-  },
-  "startReading": {
-    "message": "Start reading page content"
   },
   "readButton": {
     "message": "Read"
@@ -36,20 +36,19 @@
   "voiceControls": {
     "message": "Voice Controls"
   },
-  "startVoice": {
-    "message": "Start voice commands"
+  "micBtn": {
+    "message": "Start Voice Mode"
   },
   "voiceCommands": {
     "message": "Voice Commands"
   },
-  "voiceHint": {
-    "message": "Press $SHORTCUT$ to start and stop voice mode",
-    "placeholders": {
-      "SHORTCUT": {
-        "content": "$1",
-        "example": "Ctrl+Shift+V"
-      }
-    }
+   "voiceHint": {
+    "message": "Press",
+    "description": "First part of voice hint before shortcut key"
+  },
+  "voiceHintEnd": {
+    "message": "to start and stop voice mode",
+    "description": "Second part of voice hint after shortcut key"
   },
   "askQuestions": {
     "message": "Ask Questions"

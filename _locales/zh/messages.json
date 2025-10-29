@@ -1,18 +1,21 @@
 {
   "extensionTitle": {
-    "message": "VoxMate - 您的语音网页伴侣"
+    "message": "VoxMate - 您的语音网页助手"
   },
   "extensionSubtitle": {
-    "message": "让网络与每个人对话。"
+    "message": "让网络为每个人发声。"
   },
   "closeButton": {
     "message": "关闭扩展"
+  },
+  "gestureDisclaimer": {
+    "message": "⚠️ 在屏幕上点击或轻触以启动 AI。"
   },
   "languageTranslation": {
     "message": "语言与翻译"
   },
   "selectLanguage": {
-    "message": "选择您的首选语言"
+    "message": "选择您偏好的语言"
   },
   "translateButton": {
     "message": "翻译页面"
@@ -20,11 +23,8 @@
   "readingControls": {
     "message": "阅读控制"
   },
-  "startReading": {
-    "message": "开始阅读页面内容"
-  },
   "readButton": {
-    "message": "阅读"
+    "message": "朗读"
   },
   "pauseButton": {
     "message": "暂停"
@@ -35,26 +35,23 @@
   "voiceControls": {
     "message": "语音控制"
   },
-  "startVoice": {
-    "message": "开始语音命令"
+  "micBtn": {
+    "message": "启动语音模式"
   },
   "voiceCommands": {
-    "message": "语音命令"
+    "message": "语音指令"
   },
   "voiceHint": {
-    "message": "按 $SHORTCUT$ 开始和停止语音模式",
-    "placeholders": {
-      "SHORTCUT": {
-        "content": "$1",
-        "example": "Ctrl+Shift+V"
-      }
-    }
+    "message": "按下"
+  },
+  "voiceHintEnd": {
+    "message": "以启动或停止语音模式"
   },
   "askQuestions": {
     "message": "提问"
   },
   "askPlaceholder": {
-    "message": "关于此页面的任何问题..."
+    "message": "询问有关此页面的任何问题..."
   },
   "sendQuestion": {
     "message": "发送问题"
