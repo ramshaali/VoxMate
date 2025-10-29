@@ -504,7 +504,45 @@ class VoxMatePopup {
   }
 }
 
+
 document.addEventListener("DOMContentLoaded", () => {
+  // existing initialization
   const root = document.getElementById("popupRoot");
   new VoxMatePopup(root);
+
+  const disclaimer = document.getElementById("gestureDisclaimer");
+
+  if (!disclaimer) {
+    console.warn("⚠️ No gesture disclaimer found.");
+  } else {
+    // hide when disclaimer itself clicked
+    disclaimer.addEventListener("click", () => {
+      disclaimer.classList.add("hidden");
+      console.log("✅ User gesture detected — AI can start.");
+    });
+
+    // hide when clicking anywhere inside the popup (optional)
+    document.addEventListener("click", (e) => {
+      if (!disclaimer.contains(e.target) && !disclaimer.classList.contains("hidden")) {
+        disclaimer.classList.add("hidden");
+        console.log("✅ User gesture detected (anywhere in popup) — AI can start.");
+      }
+    });
+  }
+
+  // *** Listen for messages posted from parent page (content.js) ***
+  window.addEventListener("message", (event) => {
+    // Optionally check event.origin here to restrict sources
+    const msg = event.data || {};
+    if (msg.type === "parent-click") {
+      const d = document.getElementById("gestureDisclaimer");
+      if (d && !d.classList.contains("hidden")) {
+        d.classList.add("hidden");
+        console.log("✅ Parent click forwarded — hiding disclaimer.");
+      }
+    }
+  });
 });
+
+
+
