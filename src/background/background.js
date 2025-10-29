@@ -338,7 +338,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
           Use only the information available in the provided text. 
           If the answer is not found, respond with: "I couldn’t find that in this page."
 
-          The user's question may be in **English (en)**, **Spanish (es)**, **French (fr)**, **Hindi (hi)**, or **Chinese (zh)** only.
+          The user's question may be in **English (en)**, **Spanish (es)**, **French (fr)**, or **Chinese (zh)** only.
           Detect the language automatically and respond in the **same language** as the user's question.
 
           Webpage content:
