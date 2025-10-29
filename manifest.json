@@ -13,7 +13,7 @@
     "scripting"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/background.js"
   },
   "action": {
     "default_title": "VoxMate - Your voice web companion"
