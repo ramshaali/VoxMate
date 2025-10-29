@@ -43,6 +43,8 @@ class VoxMatePopup {
       title: this.root.querySelector(".title"),
       subtitle: this.root.querySelector(".subtitle"),
       cardTitles: this.root.querySelectorAll(".card-title"),
+      gestureDisclaimer: this.root.querySelector('#gestureDisclaimer'),
+
     };
   }
   
@@ -88,6 +90,15 @@ class VoxMatePopup {
     if (this.elements.subtitle) {
       this.elements.subtitle.textContent = this.getMessage('extensionSubtitle', 'Let the web speak to everyone.');
     }
+
+    // Update gesture disclaimer
+    if (this.elements.gestureDisclaimer) {
+      this.elements.gestureDisclaimer.textContent = this.getMessage(
+        'gestureDisclaimer',
+        '⚠️ Do any gesture (click or tap) on screen to start AI.'
+      );
+    }
+
     
     // Update close button aria-label
     this.elements.closeBtn.setAttribute('aria-label', this.getMessage('closeButton', 'Close extension'));
@@ -527,22 +538,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!disclaimer) {
     console.warn("⚠️ No gesture disclaimer found.");
-  } else {
-    // hide when disclaimer itself clicked
-    disclaimer.addEventListener("click", () => {
-      disclaimer.classList.add("hidden");
-      console.log("✅ User gesture detected — AI can start.");
-    });
-
-    // hide when clicking anywhere inside the popup (optional)
-    document.addEventListener("click", (e) => {
-      if (!disclaimer.contains(e.target) && !disclaimer.classList.contains("hidden")) {
-        disclaimer.classList.add("hidden");
-        console.log("✅ User gesture detected (anywhere in popup) — AI can start.");
-      }
-    });
-  }
-
+  } 
   // *** Listen for messages posted from parent page (content.js) ***
   window.addEventListener("message", (event) => {
     // Optionally check event.origin here to restrict sources
