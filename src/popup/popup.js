@@ -8,7 +8,6 @@ class VoxMatePopup {
         fr: "French",
         es: "Spanish",
         zh: "Chinese",
-        hi: "Hindi",
       },
     };
 
