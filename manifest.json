@@ -3,6 +3,7 @@
   "name": "VoxMate",
   "short_name": "VxM",
   "version": "1.0",
+  "default_locale": "en",
   "description": "Your voice-powered web companion. Read, summarize, and ask questions about any webpage - hands-free.",
   "permissions": [
     "activeTab",
@@ -45,7 +46,8 @@
         "public/icons/logo-64.png",
         "public/icons/logo-72.png",
         "public/icons/logo-96.png",
-        "public/icons/logo-256.png"
+        "public/icons/logo-256.png",
+        "_locales/*/*.json"
       ],
       "matches": [
         "<all_urls>"
