@@ -46,6 +46,7 @@ class VoxMatePopup {
     };
   }
   
+ 
 
   
   // ========== LANGUAGE SWITCHING METHODS ==========
@@ -411,52 +412,65 @@ class VoxMatePopup {
     await this.sendAction("toggle_voice");
   }
 
-  async summarisePage() {
-    this.setLoading(this.elements.summaryBtn, true);
+ async summarisePage() {
+  this.setLoading(this.elements.summaryBtn, true);
 
-    try {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { action: "summarise_page" });
-      }
-    } catch (error) {
-    } finally {
-      setTimeout(() => this.setLoading(this.elements.summaryBtn, false), 1500);
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { action: "summarise_page" });
+      // let the content script receive the message, then close iframe
+      setTimeout(() => {
+        // notify parent (content script) to remove the iframe
+        window.parent.postMessage({ type: "voxmate-close" }, "*");
+      }, 200); // small delay so message ordering is less likely to race
     }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setTimeout(() => this.setLoading(this.elements.summaryBtn, false), 1500);
+  }
+}
+
+ async sendQuestion() {
+  const question = this.elements.askInput.value.trim();
+  if (!question) {
+    this.showToast(this.getMessage('enterQuestion', "Please enter a question"));
+    this.elements.askInput.focus();
+    return;
   }
 
-  async sendQuestion() {
-    const question = this.elements.askInput.value.trim();
-    if (!question) {
-      this.showToast(this.getMessage('enterQuestion', "Please enter a question"));
-      this.elements.askInput.focus();
-      return;
+  this.setLoading(this.elements.askSendBtn, true);
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { action: "ask_command", question });
+
+      // clear UI immediately for UX
+      setTimeout(() => {
+        this.setLoading(this.elements.askSendBtn, false);
+        this.elements.askInput.value = "";
+        this.elements.askInput.style.height = "auto";
+      }, 1500);
+
+      // notify parent to close iframe after a small delay
+      setTimeout(() => {
+        window.parent.postMessage({ type: "voxmate-close" }, "*");
+      }, 250); // small delay
     }
-
-    this.setLoading(this.elements.askSendBtn, true);
-
-    try {
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { action: "ask_command", question });
-
-        setTimeout(() => {
-          this.setLoading(this.elements.askSendBtn, false);
-          this.elements.askInput.value = "";
-          this.elements.askInput.style.height = "auto";
-        }, 1500);
-      }
-    } catch (error) {
-      this.setLoading(this.elements.askSendBtn, false);
-      this.showToast(this.getMessage('errorSending', "Error sending question"));
-    }
+  } catch (error) {
+    this.setLoading(this.elements.askSendBtn, false);
+    this.showToast(this.getMessage('errorSending', "Error sending question"));
   }
+}
+
 
   async sendQuickQuestion(question) {
     this.setLoading(this.elements.summaryBtn, true);
@@ -504,7 +518,6 @@ class VoxMatePopup {
   }
 }
 
-
 document.addEventListener("DOMContentLoaded", () => {
   // existing initialization
   const root = document.getElementById("popupRoot");
@@ -543,6 +556,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
 
 
