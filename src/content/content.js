@@ -926,7 +926,7 @@ chrome.runtime.onMessage.addListener(async (msg) => {
       right: "40px",
       zIndex: "2147483647",
       width: "420px",
-      height: "550px",
+      height: "630px",
       border: "none",
       borderRadius: "16px",
       boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
