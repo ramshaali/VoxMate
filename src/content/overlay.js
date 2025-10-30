@@ -386,7 +386,7 @@ class VoxMateOverlay {
       title = '',
       type = 'info',
       autoHide = true,
-      duration = 60000, // Default to 1 minute for info messages
+      duration = 120000, // Default to 2 minute for info messages
       showClose = true,
       loadingId = null,
       scrollable = false
@@ -566,7 +566,7 @@ class VoxMateOverlay {
     });
   }
 
-  showInfo(content, title = '', duration = 60000) { // Default to 1 minute for info
+  showInfo(content, title = '', duration = 120000) { // Default to 2 minute for info
     return this.show(content, { 
       title, 
       type: 'info', 
@@ -633,7 +633,7 @@ class VoxMateOverlay {
       </div>
     `;
     
-    return this.showInfo(content, title, 60000); // 1 minute for Q&A
+    return this.showInfo(content, title, 300000); // 5 minute for Q&A
   }
 }
 
