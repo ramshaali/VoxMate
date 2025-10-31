@@ -553,23 +553,31 @@ async showCommands() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // existing initialization
   const root = document.getElementById("popupRoot");
   new VoxMatePopup(root);
 
   const disclaimer = document.getElementById("gestureDisclaimer");
+  const { userGestureDone } = await chrome.storage.local.get("userGestureDone");
 
   if (!disclaimer) {
     console.warn("⚠️ No gesture disclaimer found.");
-  } 
+  } else if (userGestureDone) {
+    disclaimer.classList.add("hidden");
+  }
   // *** Listen for messages posted from parent page (content.js) ***
-  window.addEventListener("message", (event) => {
+  window.addEventListener("message", async (event) => {
     // Optionally check event.origin here to restrict sources
     const msg = event.data || {};
     if (msg.type === "parent-click") {
       const d = document.getElementById("gestureDisclaimer");
+      if (userGestureDone) {
+        if (d) d.classList.add("hidden");
+        return;
+      }
       if (d && !d.classList.contains("hidden")) {
+         await chrome.storage.local.set({ userGestureDone: true });
         d.classList.add("hidden");
         console.log("✅ Parent click forwarded — hiding disclaimer.");
       }
