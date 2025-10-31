@@ -538,7 +538,7 @@ function initVoiceRecognition() {
             console.log("💬 User asked:", question || raw);
             // handleAskCommand returns the answer; ensure speaking from voice context
             handleAskCommand(question || raw).then((answer) => {
-              if (answer && voiceActive) {
+              if (answer) {
                 console.log("🔊 Speaking from voice recognition context...");
                 speakAnswer(answer);
               }
