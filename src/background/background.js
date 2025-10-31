@@ -296,13 +296,11 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
   if (req.action === "ask_with_gemini") {
     (async () => {
-      const { question } = req;
+      const { question, userLanguage, languageFullName } = request;
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-        const { userLanguage } = await chrome.storage.sync.get("userLanguage");
         const language = userLanguage || "en";
-        console.log("🌐 User language for ask_with_gemini:", language);
+        console.log("🌐 User language for ask_with_gemini:", language, languageFullName);
 
         // Get page content (limited to visible text)
         const [{ result: pageText }] = await chrome.scripting.executeScript({
@@ -341,7 +339,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
           You are an assistant that answers questions about the current webpage content.
           Use only the information available in the provided text. 
           If the answer is not found, respond with: "I couldn’t find that in this page.
-          ** Always answer in **${language.toUpperCase()}**.
+          ** Always answer in **${language}-${languageFullName}**.
 
           Webpage content:
           """${pageText}"""

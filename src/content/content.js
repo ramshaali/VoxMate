@@ -1,5 +1,5 @@
 console.log("📜 content.js loaded");
-
+import { getLanguageFullName } from "./utils/language.js";
 // ===============================
 // Highlighting & Reading functions
 // ===============================
@@ -763,10 +763,19 @@ async function handleAskCommand(question) {
       "Asking Gemini",
       loadingId
     );
+    const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+    const langCode = userLanguage || "en";
+    const languageFullName = getLanguageFullName(langCode);
 
+    // ✅ Include both code + readable name
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { action: "ask_with_gemini", question },
+        {
+          action: "ask_with_gemini",
+          question,
+          userLanguage: langCode,
+          languageFullName
+        },
         (response) => {
           // Remove loading overlay first - this now uses immediate removal
           window.voxmateOverlay.removeLoading(loadingId);
@@ -985,9 +994,9 @@ chrome.runtime.onMessage.addListener(async (msg) => {
             document.removeEventListener("click", parentClickForwarder, true);
             parentClickForwarder = null;
             if (popupFrame && popupFrame.parentNode) {
-            popupFrame.remove();
-          }
-          popupFrame = null;
+              popupFrame.remove();
+            }
+            popupFrame = null;
 
           }, 100);
         }
