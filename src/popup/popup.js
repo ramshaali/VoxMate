@@ -229,7 +229,7 @@ class VoxMatePopup {
       this.toggleVoiceControl()
     );
     this.elements.commandsBtn.addEventListener("click", () =>
-      this.sendAction("show_commands")
+      this.showCommands()
     );
 
     //Summary
@@ -422,6 +422,30 @@ class VoxMatePopup {
   async toggleVoiceControl() {
     await this.sendAction("toggle_voice");
   }
+
+async showCommands() {
+  this.setLoading(this.elements.commandsBtn, true);
+
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { action: "show_commands" });
+
+      // let the content script receive the message, then close iframe
+      setTimeout(() => {
+        window.parent.postMessage({ type: "voxmate-close" }, "*");
+      }, 200); 
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setTimeout(() => this.setLoading(this.elements.commandsBtn, false), 1500);
+  }
+}
 
  async summarisePage() {
   this.setLoading(this.elements.summaryBtn, true);
