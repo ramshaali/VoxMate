@@ -300,6 +300,10 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+        const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+        const language = userLanguage || "en";
+        console.log("🌐 User language for ask_with_gemini:", language);
+
         // Get page content (limited to visible text)
         const [{ result: pageText }] = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
@@ -336,17 +340,15 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
             const prompt = `
           You are an assistant that answers questions about the current webpage content.
           Use only the information available in the provided text. 
-          If the answer is not found, respond with: "I couldn’t find that in this page."
-
-          The user's question may be in **English (en)**, **Spanish (es)**, **French (fr)**, or **Chinese (zh)** only.
-          Detect the language automatically and respond in the **same language** as the user's question.
+          If the answer is not found, respond with: "I couldn’t find that in this page.
+          ** Always answer in **${language.toUpperCase()}**.
 
           Webpage content:
           """${pageText}"""
 
           User question: "${question}"
 
-          Respond clearly and concisely in the detected language.
+          Respond clearly and concisely.
         `;
 
 

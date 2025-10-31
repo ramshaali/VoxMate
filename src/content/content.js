@@ -171,7 +171,7 @@ function stopReading() {
 // =======================================
 chrome.runtime.onMessage.addListener(async (req) => {
   const { userLanguage } = await chrome.storage.sync.get("userLanguage");
-  console.log("user language: ",userLanguage )
+  console.log("user language: ", userLanguage)
   if (req.action === "read_text") startReading();
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
@@ -216,7 +216,7 @@ async function translatePage() {
       chrome.runtime.sendMessage(
         { action: "translate_auto", text: bodyText },
         (response) => {
-          
+
           window.voxmateOverlay.removeLoading(loadingId);
 
           if (!response?.success) {
@@ -408,38 +408,51 @@ function getCommandsText(lang) {
     en: {
       title: "Voice Commands",
       commands: [
-        "Say 'read'",
-        "Say 'pause'",
-        "Say 'stop'",
-        "Say 'translate'",
-        "Say 'show commands'",
+        "Say 'read' to start reading",
+        "Say 'pause' to pause reading",
+        "Say 'stop' to stop reading",
+        "Say 'translate' to translate the page",
+        "Say 'summarize' to get a quick overview",
+        "Ask a question by saying 'Ask: [your question]'",
+        "Say 'show commands' to see this list",
       ],
     },
     zh: {
       title: "语音命令",
-      commands: ["说“读”", "说“暂停”", "说“停止”", "说“翻译”", "说“显示命令”"],
+      commands: [
+        "说“读”以开始朗读",
+        "说“暂停”以暂停朗读",
+        "说“停止”以结束朗读",
+        "说“翻译”以翻译页面",
+        "说“总结”以快速概览内容",
+        "通过说“问：[你的问题]”来提问",
+        "说“显示命令”以查看此列表",
+      ],
     },
     es: {
       title: "Comandos de voz",
       commands: [
-        "Di 'leer'",
-        "Di 'pausa'",
-        "Di 'detener'",
-        "Di 'traducir'",
-        "Di 'mostrar comandos'",
+        "Di “leer” para empezar a leer",
+        "Di “pausa” para pausar la lectura",
+        "Di “detener” para detener la lectura",
+        "Di “traducir” para traducir la página",
+        "Di “resumir” para obtener un resumen rápido",
+        "Haz una pregunta diciendo “pregunta: [tu pregunta]”",
+        "Di “mostrar comandos” para ver esta lista",
       ],
     },
     fr: {
       title: "Commandes vocales",
       commands: [
-        "Dites 'lire'",
-        "Dites 'pause'",
-        "Dites 'arrêter'",
-        "Dites 'traduire'",
-        "Dites 'afficher les commandes'",
+        "Dites “lire” pour commencer la lecture",
+        "Dites “pause” pour mettre la lecture en pause",
+        "Dites “arrêter” pour arrêter la lecture",
+        "Dites “traduire” pour traduire la page",
+        "Dites “résumer” pour obtenir un aperçu rapide",
+        "Posez une question en disant “demande : [votre question]”",
+        "Dites “afficher les commandes” pour voir cette liste",
       ],
     },
-
   };
 
   return translations[lang] || translations.en;
@@ -742,7 +755,7 @@ window.geminiAPI = {
 // handleAskCommand function
 async function handleAskCommand(question) {
   const loadingId = 'ask_' + Date.now();
-  
+
   try {
     console.log("💬 Asking Gemini:", question);
     window.voxmateOverlay.showLoading(
@@ -780,7 +793,7 @@ async function handleAskCommand(question) {
 
           const answer = response.answer?.trim() || "No clear answer found in the page content.";
           console.log("🧠 Gemini Answer:", answer);
-          
+
           // Use the new Q&A format that shows both question and answer
           window.voxmateOverlay.showQuestionAnswer(question, answer, "Gemini Answer");
 
@@ -861,7 +874,7 @@ async function handleSummarisePage() {
       chrome.runtime.sendMessage(
         { action: "run_summarizer", text, lang },
         (response) => {
-          
+
           // Remove loading overlay first - this now uses immediate removal
           window.voxmateOverlay.removeLoading(loadingId);
 
