@@ -296,7 +296,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
 
   if (req.action === "ask_with_gemini") {
     (async () => {
-      const { question, userLanguage, languageFullName } = request;
+      const { question, userLanguage, languageFullName } = req;
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const language = userLanguage || "en";
@@ -311,7 +311,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
         const results = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           world: "MAIN",
-          func: async (question, pageText) => {
+          func: async (question, pageText, userLanguage, languageFullName) => {
             const LM = window.ai?.languageModel || window.LanguageModel;
             if (!LM) {
               return { success: false, reason: "Language Model API not available" };
@@ -339,7 +339,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
           You are an assistant that answers questions about the current webpage content.
           Use only the information available in the provided text. 
           If the answer is not found, respond with: "I couldn’t find that in this page.
-          ** Always answer in **${language}-${languageFullName}**.
+          ** Always answer in **${languageFullName}**.
 
           Webpage content:
           """${pageText}"""
@@ -353,7 +353,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
             const result = await session.prompt(prompt, { outputLanguage: "en" });
             return { success: true, answer: result };
           },
-          args: [question, pageText],
+          args: [question, pageText, userLanguage, languageFullName],
         });
 
         sendResponse(results[0].result);
