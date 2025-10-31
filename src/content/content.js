@@ -1,5 +1,4 @@
 console.log("📜 content.js loaded");
-import { getLanguageFullName } from "./utils/language.js";
 // ===============================
 // Highlighting & Reading functions
 // ===============================
