@@ -42,10 +42,12 @@
     "message": "Comandos de voz"
   },
   "voiceHint": {
-    "message": "Presiona"
+    "message": "Presiona",
+    "description": "Primera parte del mensaje de voz antes del atajo de teclado"
   },
   "voiceHintEnd": {
-    "message": "para iniciar y detener el modo de voz"
+    "message": "para comenzar o detener la escucha de comandos de voz",
+    "description": "Segunda parte del mensaje de voz después del atajo de teclado"
   },
   "askQuestions": {
     "message": "Hacer preguntas"

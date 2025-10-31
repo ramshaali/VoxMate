@@ -42,12 +42,12 @@
   "voiceCommands": {
     "message": "Voice Commands"
   },
-   "voiceHint": {
+  "voiceHint": {
     "message": "Press",
     "description": "First part of voice hint before shortcut key"
   },
   "voiceHintEnd": {
-    "message": "to start and stop voice mode",
+    "message": "to start or stop listening for voice commands",
     "description": "Second part of voice hint after shortcut key"
   },
   "askQuestions": {

@@ -42,10 +42,12 @@
     "message": "语音指令"
   },
   "voiceHint": {
-    "message": "按下"
+    "message": "按下",
+    "description": "语音提示的第一部分，在快捷键之前"
   },
   "voiceHintEnd": {
-    "message": "以启动或停止语音模式"
+    "message": "以开始或停止监听语音指令",
+    "description": "语音提示的第二部分，在快捷键之后"
   },
   "askQuestions": {
     "message": "提问"

@@ -42,10 +42,12 @@
     "message": "Commandes vocales"
   },
   "voiceHint": {
-    "message": "Appuyez sur"
+    "message": "Appuyez sur",
+    "description": "Première partie du message vocal avant le raccourci clavier"
   },
   "voiceHintEnd": {
-    "message": "pour démarrer et arrêter le mode vocal"
+    "message": "pour démarrer ou arrêter l’écoute des commandes vocales",
+    "description": "Deuxième partie du message vocal après le raccourci clavier"
   },
   "askQuestions": {
     "message": "Poser des questions"
