@@ -2,6 +2,12 @@
 
 VoxMate is a powerful Chrome extension that transforms the way you interact with web content through voice commands. Built with Google Chrome's native built-in APIs (Translate, Summarizer, and Prompt APIs), it operates completely offline and securely on your device. Read, summarize, and ask questions about any webpage - all hands-free, without internet dependency!
 
+## VoxMate Demo Video
+
+[![Watch the VoxMate Demo](https://img.youtube.com/vi/0xKo47nco4s/maxresdefault.jpg)](https://www.youtube.com/watch?v=0xKo47nco4s)
+
+🎥 Click the image above or [watch on YouTube](https://www.youtube.com/watch?v=0xKo47nco4s).
+
 ## Features
 
 - 🎙️ **Voice Control**: Seamlessly navigate and interact with web content using voice commands
