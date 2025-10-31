@@ -171,6 +171,7 @@ function stopReading() {
 // =======================================
 chrome.runtime.onMessage.addListener(async (req) => {
   const { userLanguage } = await chrome.storage.sync.get("userLanguage");
+  console.log("user language: ",userLanguage )
   if (req.action === "read_text") startReading();
   if (req.action === "pause_read") pauseReading();
   if (req.action === "stop_read") stopReading();
@@ -521,12 +522,18 @@ function initVoiceRecognition() {
             translatePage();
             break;
           case "show commands":
+            if (popupFrame?.contentWindow) {
+              popupFrame.contentWindow.postMessage({ type: "voice-command", command: "show_commands" }, "*");
+            }
             const text = getCommandsText(userLanguage);
             window.voxmateOverlay.showCommands(text);
             speakCommands(text);
             break;
           case "summarise":
             console.log("📝 Trigger summarise function");
+            if (popupFrame?.contentWindow) {
+              popupFrame.contentWindow.postMessage({ type: "voice-command", command: "summarise" }, "*");
+            }
             handleSummarisePage().then((summary) => {
               if (summary) {
                 console.log("🧠 Summary ready:", summary);
@@ -536,6 +543,9 @@ function initVoiceRecognition() {
             break;
           case "ask":
             console.log("💬 User asked:", question || raw);
+            if (popupFrame?.contentWindow) {
+              popupFrame.contentWindow.postMessage({ type: "voice-command", command: "ask" }, "*");
+            }
             // handleAskCommand returns the answer; ensure speaking from voice context
             handleAskCommand(question || raw).then((answer) => {
               if (answer) {
