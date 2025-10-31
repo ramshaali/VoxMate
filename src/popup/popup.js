@@ -574,6 +574,19 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("✅ Parent click forwarded — hiding disclaimer.");
       }
     }
+
+    if (msg.type === "voice-command") {
+    const command = (msg.command || "").toLowerCase();
+    console.log("🎤 Voice command received in popup:", command, msg);
+
+    // Close popup for specific voice commands — small delay to allow UX actions
+    if (["show_commands", "show commands", "ask", "summarise", "summarize"].includes(command)) {
+      setTimeout(() => {
+        // Let the popup perform any local cleanup/animation then instruct parent to close
+        window.parent.postMessage({ type: "voxmate-close" }, "*");
+      }, 180);
+    }
+  }
   });
 });
 
