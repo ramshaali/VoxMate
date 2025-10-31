@@ -971,8 +971,11 @@ chrome.runtime.onMessage.addListener(async (msg) => {
             // cleanup
             document.removeEventListener("click", parentClickForwarder, true);
             parentClickForwarder = null;
+            if (popupFrame && popupFrame.parentNode) {
             popupFrame.remove();
-            popupFrame = null;
+          }
+          popupFrame = null;
+
           }, 100);
         }
       }
